@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FloodGuard | Flash Flood Prediction System</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Arial,Helvetica,sans-serif;background:#120811;color:#fff0fa}
+nav{height:70px;padding:0 6%;display:flex;align-items:center;justify-content:space-between;background:#180b17;border-bottom:1px solid #3b1734;position:sticky;top:0;z-index:10}
+.logo{font-size:20px;font-weight:800;letter-spacing:1px}.logo span{font-size:24px}
+.links{display:flex;gap:28px}.links a{color:#9fb9bd;text-decoration:none;font-size:14px}.links a:hover{color:#ff5db1}
+.status{font-size:11px;color:#6ee7a2}.dot{display:inline-block;width:8px;height:8px;background:#52e48c;border-radius:50%;margin-right:6px}
+.hero{min-height:560px;padding:75px 9%;display:flex;justify-content:space-between;align-items:center;background:radial-gradient(circle at 80% 40%,#123b45 0,#120811 42%)}
+.heroText{max-width:700px}.tag{color:#ff5db1;font-size:11px;font-weight:bold;letter-spacing:2px;margin-bottom:14px}
+h1{font-size:clamp(44px,7vw,78px);line-height:.95;margin-bottom:22px}h1 span{color:#ff72bd}
+.desc{max-width:560px;color:#d8a8c8;font-size:16px;line-height:1.7}
+.buttons{display:flex;gap:12px;margin-top:30px}button{border:0;background:#ff4fa8;color:#180812;padding:14px 20px;font-weight:bold;border-radius:7px;cursor:pointer}button:hover{transform:translateY(-2px)}button.secondary{background:transparent;color:#fff0fa;border:1px solid #613052}
+.riskCard{width:290px;padding:35px;text-align:center;background:#211020;border:1px solid #542345;border-radius:20px}.riskCard>p:first-child{color:#c79abb;font-size:11px;letter-spacing:2px}
+.riskCircle{width:170px;height:170px;margin:22px auto;border-radius:50%;display:flex;align-items:center;justify-content:center;border:8px solid #ff72b6;box-shadow:0 0 35px rgba(72,214,139,.2);transition:.3s}.riskCircle span{font-size:22px;font-weight:bold;color:#ff72b6}.updated{color:#9f728f;font-size:11px}
+.section{padding:75px 7%}.title{display:flex;justify-content:space-between;align-items:end;margin-bottom:30px}.title h2,.center h2{font-size:34px}.location{color:#bd8eae;font-size:13px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.card{background:#1d0e1b;border:1px solid #4a1c3d;border-radius:14px;padding:23px}.icon{font-size:24px;margin-bottom:20px}.card p{color:#bd8eae;font-size:10px;letter-spacing:1.5px}.value{font-size:34px;margin:8px 0 18px}.value small{color:#b985a7;font-size:13px}.progress{height:5px;background:#35162e;border-radius:5px;overflow:hidden}.progress div{height:100%;background:#ff5bad;border-radius:5px;width:40%;transition:.4s}.info{display:block;margin-top:12px;color:#986d8b;font-size:10px}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:20px}.panel{background:#1d0e1b;border:1px solid #4a1c3d;border-radius:14px;padding:23px}.panelHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.panelHead h3{font-size:19px}.live{color:#ff83c1;font-size:10px}
+.alert{display:flex;gap:12px;padding:15px;border-radius:9px;margin-bottom:10px}.safe{background:rgba(67,210,130,.08);border:1px solid rgba(67,210,130,.2)}.warning{background:rgba(245,181,61,.08);border:1px solid rgba(245,181,61,.3)}.danger{background:rgba(244,75,75,.1);border:1px solid rgba(244,75,75,.3)}.alert strong{font-size:13px}.alert p{color:#c39ab6;font-size:11px;margin-top:4px}.alert small{display:block;color:#956b86;margin-top:6px;font-size:9px}
+.map{height:430px;position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(160deg,#281325,#34152d 40%,#241022);border:1px solid #54223f}.mountain{position:absolute;bottom:0;width:0;height:0;border-left:220px solid transparent;border-right:220px solid transparent;border-bottom:330px solid #4a1d3e}.m1{left:40px}.m2{right:20px;transform:scale(.8);border-bottom-color:#3b1733}.river{position:absolute;width:105px;height:650px;background:#9b2f70;transform:rotate(22deg);left:43%;top:-80px;opacity:.8}.village{position:absolute;left:13%;bottom:22%;font-size:42px;letter-spacing:7px}.sensor{position:absolute;padding:9px 13px;background:#160a14;border:1px solid #ff5bad;border-radius:8px;color:#e0b1cf;font-size:11px}.sensor i{display:inline-block;width:8px;height:8px;background:#ff65b5;border-radius:50%;margin-right:6px}.s1{left:34%;top:48%}.s2{right:18%;top:30%}.bridge{position:absolute;left:40%;top:55%;color:#e4a0c6;font-size:28px}.mapLabel{position:absolute;top:20px;left:20px;color:#c497b8;font-size:10px;letter-spacing:2px}
+.center{text-align:center;max-width:650px;margin:auto}.center>p:last-child{color:#bd8eae;margin-top:12px;line-height:1.6}.steps{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:45px}.step{width:210px;padding:22px;background:#1d0e1b;border:1px solid #4a1c3d;border-radius:12px}.step>span{color:#31d1db;font-size:11px}.step h3{font-size:13px;margin:13px 0}.step p{color:#bd8eae;font-size:11px;line-height:1.6}.arrow{color:#3acbd4;font-size:23px}
+footer{padding:40px 7%;border-top:1px solid #3b1734;display:flex;justify-content:space-between;color:#9f718f}footer strong{color:#fff0fa}footer p{font-size:11px;margin-top:7px}
+@media(max-width:900px){.links{display:none}.hero{flex-direction:column;align-items:flex-start;gap:45px}.riskCard{width:100%}.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.steps{flex-direction:column}.arrow{transform:rotate(90deg)}}
+@media(max-width:550px){.hero{padding:55px 6%}.section{padding:55px 5%}.cards{grid-template-columns:1fr}.buttons{flex-direction:column}footer{flex-direction:column;gap:20px}}
+
+#assamMap{height:520px;width:100%;border-radius:12px;overflow:hidden;border:1px solid #4a1c3d}
+.mapLegend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:13px;color:#bd8eae;font-size:11px}
+.mapLegend span{display:flex;align-items:center;gap:6px}.mapLegend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legendSafe{background:#ff72b6}.legendWarn{background:#ffb04d}.legendDanger{background:#ff4f79}.legendHint{margin-left:auto}
+.districtInfo{margin-top:15px;padding:15px;background:#211020;border:1px solid #542345;border-radius:10px;color:#fff0fa}
+.districtInfo p{color:#bd8eae;font-size:11px;margin-top:6px;line-height:1.5}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1d0e1b;color:#fff0fa}
+.leaflet-popup-content strong{color:#ff72bd}
+.riskMarker{width:18px;height:18px;border-radius:50%;border:3px solid #fff0fa;box-shadow:0 0 12px rgba(255,93,177,.65)}
+.assamMapWrap{position:relative}
+.mapAlertBanner{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:1000;display:none;min-width:300px;max-width:90%;padding:12px 18px;border:2px solid #ff4f79;border-radius:12px;background:rgba(30,8,20,.94);box-shadow:0 0 25px rgba(255,79,121,.65);text-align:center;color:#fff0fa;font-weight:800;letter-spacing:.5px}
+.mapAlertBanner.show{display:block;animation:alertPulse 1.2s infinite alternate}
+@keyframes alertPulse{from{box-shadow:0 0 12px rgba(255,79,121,.35)}to{box-shadow:0 0 30px rgba(255,79,121,.9)}}
+.mapAlertBanner small{display:block;color:#ffb7cb;font-weight:500;margin-top:4px;letter-spacing:0}
+.alertRing{border:4px solid #ff4f79;border-radius:50%;box-shadow:0 0 0 0 rgba(255,79,121,.75);animation:ringPulse 1.4s infinite}
+@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(255,79,121,.7)}70%{box-shadow:0 0 0 22px rgba(255,79,121,0)}100%{box-shadow:0 0 0 0 rgba(255,79,121,0)}}
+.mapAlertTag{background:#ff4f79;color:white;padding:4px 8px;border-radius:7px;font-size:10px;font-weight:800;display:inline-block;margin-top:6px}
+
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""></head>
+<body>
+
+<nav>
+  <div class="logo"><span>🌊</span> FLOODGUARD</div>
+  <div class="links">
+    <a href="#dashboard">Dashboard</a><a href="#assam-map">Assam Map</a><a href="#monitoring">Monitoring</a><a href="#alerts">Alerts</a><a href="#about">About</a>
+  </div>
+  <div class="status"><span class="dot"></span>SYSTEM ONLINE</div>
+</nav>
+
+<section class="hero">
+  <div class="heroText">
+    <p class="tag">SMART INDIA HACKATHON 2026 • PS 26192</p>
+    <h1>FLASH FLOOD<br><span>PREDICTION SYSTEM</span></h1>
+    <p class="desc">A multi-source disaster monitoring and early-warning dashboard designed for vulnerable hilly regions.</p>
+    <div class="buttons">
+      <button onclick="document.getElementById('dashboard').scrollIntoView()">VIEW LIVE DASHBOARD</button>
+      <button class="secondary" onclick="runSimulation()">▶ RUN FLOOD SIMULATION</button>
+    </div>
+  </div>
+  <div class="riskCard">
+    <p>CURRENT RISK LEVEL</p>
+    <div class="riskCircle" id="riskCircle"><span id="risk">SAFE</span></div>
+    <p class="updated">Last updated: <span id="clock">--:--:--</span></p>
+  </div>
+</section>
+
+<section id="dashboard" class="section">
+  <div class="title">
+    <div><p class="tag">REAL-TIME MONITORING</p><h2>Environmental Dashboard</h2></div>
+    <div class="location">📍 Hilly Region Monitoring Zone</div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="icon">🌧️</div><p>RAINFALL</p><div class="value"><span id="rain">42</span> <small>mm</small></div><div class="progress"><div id="rainBar"></div></div><span class="info">Last 1 hour</span></div>
+    <div class="card"><div class="icon">🌊</div><p>WATER LEVEL</p><div class="value"><span id="water">1.2</span> <small>m</small></div><div class="progress"><div id="waterBar"></div></div><span class="info">River sensor</span></div>
+    <div class="card"><div class="icon">💧</div><p>SOIL MOISTURE</p><div class="value"><span id="soil">38</span> <small>%</small></div><div class="progress"><div id="soilBar"></div></div><span class="info">Ground sensor</span></div>
+    <div class="card"><div class="icon">🌡️</div><p>TEMPERATURE</p><div class="value"><span id="temp">24</span> <small>°C</small></div><div class="progress"><div id="tempBar"></div></div><span class="info">Weather station</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panelHead"><div><p class="tag">LIVE DATA</p><h3>Rainfall & Water Level</h3></div><span class="live">● LIVE</span></div>
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="panel" id="alerts">
+      <div class="panelHead"><div><p class="tag">EARLY WARNING</p><h3>Recent Alerts</h3></div></div>
+      <div id="alertBox"><div class="alert safe"><div>✓</div><div><strong>System Normal</strong><p>No immediate flood threat detected.</p><small>Just now</small></div></div></div>
+    </div>
+  </div>
+</section>
+
+
+<section id="assam-map" class="section">
+  <div class="title">
+    <div><p class="tag">DISTRICT-LEVEL EARLY WARNING</p><h2>Assam Flood Risk Map</h2></div>
+    <div class="location">📍 Assam, India</div>
+  </div>
+  <div class="panel">
+    <div class="panelHead">
+      <div><p class="tag">PREDICTED FLOOD ZONES</p><h3>Selected Assam Districts</h3></div>
+      <span class="live">● MAP ONLINE</span>
+    </div>
+    <div class="assamMapWrap"><div id="assamMap"></div><div id="mapAlertBanner" class="mapAlertBanner">⚠ FLASH FLOOD ALERT<small id="mapAlertText">Critical risk detected</small></div></div>
+    <div class="mapLegend">
+      <span><i class="legendSafe"></i> Safe</span>
+      <span><i class="legendWarn"></i> Warning</span>
+      <span><i class="legendDanger"></i> Critical</span>
+      <span class="legendHint">Click a marker for district details.</span>
+    </div>
+    <div id="districtInfo" class="districtInfo">
+      <strong>Select a district on the map</strong>
+      <p>The dashboard will show its simulated flood-risk level and recommended alert.</p>
+    </div>
+  </div>
+</section>
+<section id="monitoring" class="section">
+  <div class="title"><div><p class="tag">RISK MONITORING</p><h2>Monitoring Zone</h2></div></div>
+  <div class="map">
+    <div class="mountain m1"></div><div class="mountain m2"></div><div class="river"></div>
+    <div class="village">🏠 🏠 🏠</div>
+    <div class="sensor s1"><i></i>Sensor 01</div><div class="sensor s2"><i></i>Sensor 02</div>
+    <div class="bridge">═════════</div><div class="mapLabel">FLOOD RISK MONITORING AREA</div>
+  </div>
+</section>
+
+<section id="about" class="section">
+  <div class="center"><p class="tag">HOW IT WORKS</p><h2>From Data to Early Warning</h2><p>Multiple environmental data sources are combined to detect rapidly changing flood conditions.</p></div>
+  <div class="steps">
+    <div class="step"><span>01</span><h3>DATA COLLECTION</h3><p>Rainfall, water level, soil moisture and weather data are collected.</p></div><div class="arrow">→</div>
+    <div class="step"><span>02</span><h3>ANALYSIS</h3><p>The system analyses environmental conditions and unusual patterns.</p></div><div class="arrow">→</div>
+    <div class="step"><span>03</span><h3>PREDICTION</h3><p>A prediction model estimates the possibility of flash flooding.</p></div><div class="arrow">→</div>
+    <div class="step"><span>04</span><h3>EARLY WARNING</h3><p>Alerts can be sent to authorities and people in vulnerable areas.</p></div>
+  </div>
+</section>
+
+<footer><div><strong>🌊 FLOODGUARD</strong><p>Flash Flood Prediction System for Hilly Regions</p></div><div><p>Smart India Hackathon 2026</p><p>Problem Statement 26192 • Ministry of Home Affairs / NDRF</p></div></footer>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const districtData=[
+{name:"Golaghat",lat:26.00,lng:93.72,risk:"WARNING",rainfall:68,water:2.0,note:"Rising simulated risk. Prepare a local warning."},
+{name:"Guwahati (Kamrup Metro)",lat:26.14,lng:91.74,risk:"CRITICAL",rainfall:91,water:2.8,note:"High simulated flood risk. Evacuation alert recommended for low-lying areas."},
+{name:"Tezpur (Sonitpur)",lat:26.63,lng:92.80,risk:"WARNING",rainfall:74,water:2.2,note:"Moderate-to-high simulated risk. Monitor river and rainfall sensors."},
+{name:"Jorhat",lat:26.75,lng:94.22,risk:"SAFE",rainfall:31,water:1.1,note:"No immediate simulated flood threat."},
+{name:"Nagaon",lat:26.35,lng:92.68,risk:"WARNING",rainfall:62,water:1.9,note:"Conditions should be monitored closely."},
+{name:"Lakhimpur",lat:27.24,lng:94.10,risk:"SAFE",rainfall:28,water:1.0,note:"No immediate simulated flood threat."},
+{name:"Dibrugarh",lat:27.47,lng:94.91,risk:"WARNING",rainfall:70,water:2.1,note:"Rising simulated risk. Check nearby river sensors."}
+];
+const assamBounds=L.latLngBounds([24.0,89.5],[28.4,96.2]);
+const assamMap=L.map("assamMap",{minZoom:7,maxZoom:17,maxBounds:assamBounds,maxBoundsViscosity:1}).setView([26.35,92.95],7.3);
+// Satellite imagery from Esri ArcGIS World Imagery.
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:17,attribution:"Tiles &copy; Esri"}).addTo(assamMap);
+function riskColor(r){return r==="CRITICAL"?"#ff4f79":r==="WARNING"?"#ffb04d":"#ff72b6"}
+function markerIcon(r,alert=false){return L.divIcon({className:"",html:'<div class="riskMarker '+(alert?'alertRing':'')+'" style="background:'+riskColor(r)+'"></div>',iconSize:[alert?26:18,alert?26:18],iconAnchor:[alert?13:9,alert?13:9]})}
+const districtMarkers={};
+function selectDistrict(d){
+ document.getElementById("districtInfo").innerHTML="<strong>"+d.name+" — "+d.risk+"</strong><p>Simulated rainfall: "+d.rainfall+" mm/hour • Water level: "+d.water+" m</p><p>"+d.note+"</p>";
+}
+districtData.forEach(d=>{
+ const m=L.marker([d.lat,d.lng],{icon:markerIcon(d.risk)}).addTo(assamMap);
+ districtMarkers[d.name]=m;
+ m.bindPopup("<strong>"+d.name+"</strong><br>Risk: <b>"+d.risk+"</b><br>Rainfall: "+d.rainfall+" mm/h<br>Water level: "+d.water+" m<br><span class=mapAlertTag>"+(d.risk==="CRITICAL"?"⚠ ALERT ZONE":"MONITORING ZONE")+"</span><br><br>"+d.note);
+ m.on("click",()=>selectDistrict(d));
+});
+function triggerMapAlert(d){
+  const banner=document.getElementById("mapAlertBanner");
+  document.getElementById("mapAlertText").textContent=d.name+" • CRITICAL FLOOD RISK • Auto-focused location";
+  banner.classList.add("show");
+  Object.keys(districtMarkers).forEach(name=>{const district=districtData.find(x=>x.name===name); districtMarkers[name].setIcon(markerIcon(district.risk,false));});
+  districtMarkers[d.name].setIcon(markerIcon("CRITICAL",true));
+  assamMap.flyTo([d.lat,d.lng],11,{duration:2.2});
+  setTimeout(()=>districtMarkers[d.name].openPopup(),2200);
+  document.getElementById("districtInfo").innerHTML="<strong>⚠ FLASH FLOOD ALERT — "+d.name+"</strong><p>Critical simulated conditions detected. Rainfall: "+d.rainfall+" mm/hour • Water level: "+d.water+" m</p><p>Evacuation warning recommended in this simulation.</p>";
+}
+
+</script>
+<script>
+let rain=42,water=1.2,soil=38,temp=24;
+const rainEl=document.getElementById("rain"),waterEl=document.getElementById("water"),soilEl=document.getElementById("soil"),tempEl=document.getElementById("temp");
+const riskEl=document.getElementById("risk"),circle=document.getElementById("riskCircle"),alerts=document.getElementById("alertBox");
+const ctx=document.getElementById("chart").getContext("2d");
+const chart=new Chart(ctx,{type:"line",data:{labels:[],datasets:[
+{label:"Rainfall (mm)",data:[],borderWidth:2,tension:.4},
+{label:"Water Level (m)",data:[],borderWidth:2,tension:.4}
+]},options:{responsive:true,plugins:{legend:{labels:{color:"#cda3bf"}}},scales:{x:{ticks:{color:"#95677f"},grid:{color:"#35162f"}},y:{ticks:{color:"#95677f"},grid:{color:"#35162f"}}}}});
+
+function update(){
+  rainEl.textContent=Math.round(rain);waterEl.textContent=water.toFixed(1);soilEl.textContent=Math.round(soil);tempEl.textContent=Math.round(temp);
+  document.getElementById("rainBar").style.width=Math.min(rain,100)+"%";
+  document.getElementById("waterBar").style.width=Math.min(water*25,100)+"%";
+  document.getElementById("soilBar").style.width=soil+"%";
+  document.getElementById("tempBar").style.width=Math.min(temp*2,100)+"%";
+  let score=(rain>=80?40:rain>=60?25:rain>=40?10:0)+(water>=2.5?40:water>=2?25:water>=1.5?10:0)+(soil>=80?20:soil>=60?10:0);
+  let r=score>=70?"CRITICAL":score>=40?"WARNING":"SAFE";
+  riskEl.textContent=r;
+  let c=r==="CRITICAL"?"#ff4f79":r==="WARNING"?"#ffb04d":"#ff72b6";
+  circle.style.borderColor=c;riskEl.style.color=c;
+}
+function tick(){
+  rain=Math.max(5,Math.min(100,rain+(Math.random()-.48)*5));
+  water=Math.max(.5,Math.min(4,water+(Math.random()-.45)*.15));
+  soil=Math.max(10,Math.min(100,soil+(Math.random()-.45)*3));
+  temp=Math.max(10,Math.min(40,temp+(Math.random()-.5)));
+  update();
+  const t=new Date().toLocaleTimeString();
+  chart.data.labels.push(t);chart.data.datasets[0].data.push(rain);chart.data.datasets[1].data.push(water);
+  if(chart.data.labels.length>10){chart.data.labels.shift();chart.data.datasets[0].data.shift();chart.data.datasets[1].data.shift()}
+  chart.update();
+  if(rain>70||water>1.8){alerts.innerHTML='<div class="alert warning"><div>⚠</div><div><strong>Flood Risk Increasing</strong><p>Environmental conditions are being monitored closely.</p><small>'+t+'</small></div></div>'}
+}
+function runSimulation(){
+  rain=92;water=2.8;soil=82;update();
+  alerts.innerHTML='<div class="alert danger"><div>!</div><div><strong>CRITICAL FLOOD ALERT</strong><p>Simulation indicates a high flash-flood risk. Evacuation warning recommended.</p><small>Simulation mode</small></div></div>';
+  const alertDistrict=districtData.find(d=>d.name==="Guwahati (Kamrup Metro)") || districtData.find(d=>d.risk==="CRITICAL") || districtData[0];
+  triggerMapAlert(alertDistrict);
+  document.getElementById("assam-map").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function clock(){document.getElementById("clock").textContent=new Date().toLocaleTimeString()}
+setInterval(clock,1000);clock();update();setInterval(tick,5000);
+</script>
+</body>
+</html>
