@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en" data-state="normal">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c1014">
+<title>VisionForge | Flash Flood Prediction System</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1014'/%3E%3Crect x='10' y='10' width='12' height='12' rx='2.5' fill='%233fc6e0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"></script>
+<style>
+/* ===================================================================
+   VisionForge — design tokens
+   =================================================================== */
+:root{
+  --bg:#0c1014; --panel:rgba(20,26,32,.78); --panel-solid:#141a20; --panel-2:#1a2129;
+  --border:#262f38; --border-soft:#1e262e; --border-hi:#34414d;
+  --ink:#e7edf2; --ink-dim:#93a1af; --ink-faint:#7a8896;
+  --cyan:#3fc6e0; --cyan-dim:#1f4a54;
+  --ok:#3ecf7e; --warn:#f0a83c; --crit:#ef5262; --safe:#4d8fea; --high:#f2762e;
+  --state:var(--ok); --state-rgb:62,207,126;
+  --mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+  --sans:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+:root[data-state="warning"]{--state:var(--warn);--state-rgb:240,168,60}
+:root[data-state="critical"]{--state:var(--crit);--state-rgb:239,82,98}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font-family:inherit}
+::selection{background:var(--cyan-dim);color:#fff}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--cyan);color:#08131a;padding:8px 14px;border-radius:6px;z-index:300;font-size:13px;font-weight:600}
+.skip:focus{left:8px}
+.ico{display:inline-flex;width:1em;height:1em;flex-shrink:0}
+.ico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- nav ---------- */
+nav{height:64px;padding:0 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  background:rgba(12,16,20,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:.4px;text-decoration:none}
+.brand-mark{width:10px;height:10px;border-radius:2px;background:var(--cyan)}
+.navlinks{display:flex;gap:26px}
+.navlinks a{color:var(--ink-dim);text-decoration:none;font-size:13.5px;padding:4px 0;border-bottom:1px solid transparent;transition:color .15s,border-color .15s}
+.navlinks a:hover{color:var(--ink)}
+.navlinks a[aria-current="true"]{color:var(--ink);border-bottom-color:var(--cyan)}
+.nav-right{display:flex;align-items:center;gap:14px}
+.sysstatus{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ok);letter-spacing:.4px;white-space:nowrap}
+.sysdot{position:relative;width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.sysdot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ok);animation:ping 2.4s cubic-bezier(0,0,.2,1) infinite}
+@keyframes ping{0%{transform:scale(1);opacity:.6}80%,100%{transform:scale(3);opacity:0}}
+.menu-btn{display:none;width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--panel-2);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;font-size:18px}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:190;background:rgba(12,16,20,.97);border-bottom:1px solid var(--border);padding:8px 18px 16px}
+.mobile-menu.open{display:block}
+.mobile-menu a{display:block;padding:13px 4px;color:var(--ink-dim);text-decoration:none;font-size:14.5px;border-top:1px solid var(--border-soft)}
+.mobile-menu a:first-child{border-top:0}
+.mobile-menu a[aria-current="true"]{color:var(--cyan)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;padding:11px 18px;font-size:13.5px;font-weight:600;
+  border-radius:7px;cursor:pointer;text-decoration:none;line-height:1.2;transition:transform .12s,background .15s,border-color .15s}
+.btn .ico{font-size:15px}
+.btn-primary{background:var(--cyan);color:#08131a}
+.btn-primary:hover{transform:translateY(-1px);background:#5ad2e8}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--border-hi)}
+.btn-ghost:hover{border-color:var(--cyan-dim);background:var(--panel-2)}
+.btn-sm{padding:8px 13px;font-size:12.5px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;padding:72px 32px 64px;display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;
+  border-bottom:1px solid var(--border-soft)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 80% at 30% 40%,#000 20%,transparent 75%);
+  mask-image:radial-gradient(ellipse 70% 80% at 30% 40%,#000 20%,transparent 75%)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 50% 60% at 85% 20%,rgba(63,198,224,.07),transparent 70%)}
+.hero>*{position:relative;z-index:1}
+.eyebrow{font-family:var(--mono);font-size:11.5px;color:var(--cyan);letter-spacing:.3px;margin-bottom:16px}
+h1{font-size:clamp(32px,4vw,46px);font-weight:700;line-height:1.12;letter-spacing:-.6px;margin-bottom:16px;max-width:680px}
+.hero p.desc{max-width:540px;color:var(--ink-dim);font-size:15px}
+.hero-actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+.hero-note{margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.hero-seq>*{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+.hero-seq>*:nth-child(2){animation-delay:.07s}.hero-seq>*:nth-child(3){animation-delay:.14s}
+.hero-seq>*:nth-child(4){animation-delay:.21s}.hero-seq>*:nth-child(5){animation-delay:.28s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.overview-card{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:12px;padding:26px;animation:rise .7s .2s cubic-bezier(.2,.7,.2,1) both}
+.oc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+.oc-label{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.4px}
+.sim-chip{font-family:var(--mono);font-size:9.5px;color:var(--cyan);border:1px solid var(--cyan-dim);background:rgba(63,198,224,.07);padding:3px 8px;border-radius:4px;letter-spacing:.3px}
+.status-ring{width:156px;height:156px;margin:0 auto;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:5px solid var(--state);transition:border-color .4s;box-shadow:0 0 0 1px rgba(var(--state-rgb),.15),inset 0 0 30px rgba(var(--state-rgb),.06)}
+.status-ring span{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:.5px;color:var(--state);transition:color .4s}
+.status-ring small{color:var(--ink-faint);font-size:10.5px;margin-top:4px}
+.oc-meta{display:flex;justify-content:space-between;margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+/* ---------- sections ---------- */
+.section{padding:64px 32px}
+.section+.section{border-top:1px solid var(--border-soft)}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;flex-wrap:wrap;gap:14px}
+.section-head h2{font-size:24px;font-weight:700;letter-spacing:-.3px}
+.section-tag{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.3px}
+.head-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- glass panels ---------- */
+.panel,.metric,.sensor-card,.tier,.safe-card,.cta-3d{background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -18px rgba(0,0,0,.7)}
+.panel{padding:22px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px}
+.panel-head h3{font-size:15px;font-weight:600}
+.live-tag{font-family:var(--mono);font-size:10px;color:var(--cyan);display:flex;align-items:center;gap:6px;letter-spacing:.3px}
+.live-tag i{width:6px;height:6px;border-radius:50%;background:var(--cyan);display:inline-block;animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+
+/* spotlight hover (21st.dev-style) */
+.spot{position:relative;isolation:isolate}
+.spot::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity .25s;
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(63,198,224,.10),transparent 65%)}
+.spot:hover::before{opacity:1}
+
+/* ---------- command center ---------- */
+.cc-grid{display:grid;grid-template-columns:minmax(300px,1fr) 2fr;gap:16px}
+.status-panel{position:relative;border-radius:14px;padding:26px;background:linear-gradient(160deg,rgba(var(--state-rgb),.10),rgba(20,26,32,.85) 55%);
+  border:1px solid rgba(var(--state-rgb),.28);display:flex;flex-direction:column;gap:6px;transition:background .5s,border-color .5s}
+.beam::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:conic-gradient(from var(--beam,0deg),transparent 0 72%,rgba(var(--state-rgb),.95) 90%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  animation:beam 7s linear infinite}
+@property --beam{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes beam{to{--beam:360deg}}
+.sp-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.sp-label{font-family:var(--mono);font-size:11px;color:var(--ink-dim);letter-spacing:.4px}
+.model-tag{font-family:var(--mono);font-size:9.5px;color:var(--cyan);border:1px solid var(--cyan-dim);background:rgba(63,198,224,.07);padding:3px 8px;border-radius:4px}
+.sp-status{font-family:var(--mono);font-size:clamp(34px,4.2vw,50px);font-weight:600;letter-spacing:1px;color:var(--state);line-height:1.1;margin-top:18px;transition:color .4s}
+.sp-score{font-family:var(--mono);color:var(--ink);font-size:20px;margin-bottom:14px}
+.sp-score small{color:var(--ink-faint);font-size:13px}
+.gauge-wrap{position:relative;padding:6px 0 0;margin-top:auto}
+.gauge{display:flex;height:8px;border-radius:6px;overflow:hidden;gap:2px}
+.g-seg{opacity:.28;transition:opacity .4s}
+.g-seg.on{opacity:1}
+.g-ok{flex:40;background:var(--ok)}.g-warn{flex:30;background:var(--warn)}.g-crit{flex:30;background:var(--crit)}
+.gauge-marker{position:absolute;top:0;height:20px;width:2px;background:#fff;border-radius:2px;left:0;transform:translateX(-1px);transition:left .6s cubic-bezier(.3,.7,.2,1)}
+.gauge-scale{position:relative;height:16px;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.gauge-scale span{position:absolute;transform:translateX(-50%)}
+.gauge-scale span:first-child{transform:none}.gauge-scale span:last-child{transform:translateX(-100%)}
+.sp-weights{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.sp-weights span{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);background:rgba(255,255,255,.04);border:1px solid var(--border-soft);padding:3px 8px;border-radius:5px}
+
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.metric{padding:20px}
+.metric-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px}
+.metric-label{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ink-dim);letter-spacing:.3px}
+.metric-label .ico{font-size:15px;color:var(--cyan)}
+.metric-badge{font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:4px;letter-spacing:.3px;display:inline-block}
+.badge-ok{background:rgba(62,207,126,.12);color:var(--ok)}
+.badge-warn{background:rgba(240,168,60,.12);color:var(--warn)}
+.badge-crit{background:rgba(239,82,98,.12);color:var(--crit)}
+.metric-val{font-family:var(--mono);font-size:34px;font-weight:500;letter-spacing:-.5px}
+.metric-val small{font-size:14px;color:var(--ink-dim);font-weight:400;letter-spacing:0}
+.metric-trend{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:2px;min-height:17px}
+.metric-trend.up{color:var(--warn)}.metric-trend.down{color:var(--ok)}
+.metric-bar{height:4px;background:var(--border-soft);border-radius:4px;overflow:hidden;margin-top:12px}
+.metric-bar div{height:100%;width:0;border-radius:4px;transition:width .6s cubic-bezier(.3,.7,.2,1),background .4s}
+
+.panel-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px}
+.stack{display:grid;gap:16px;align-content:start}
+.chart-box{position:relative;height:210px}
+.chart-fallback{display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;border:1px dashed var(--border);border-radius:8px}
+
+/* alert panel */
+.alert-current{display:flex;gap:14px;padding:16px;border-radius:10px;border:1px solid rgba(62,207,126,.25);background:rgba(62,207,126,.07);transition:background .4s,border-color .4s}
+.alert-current[data-level="warning"]{border-color:rgba(240,168,60,.35);background:rgba(240,168,60,.09)}
+.alert-current[data-level="critical"]{border-color:rgba(239,82,98,.45);background:rgba(239,82,98,.11)}
+.ac-icon{font-size:22px;color:var(--ok);margin-top:1px}
+.alert-current[data-level="warning"] .ac-icon{color:var(--warn)}
+.alert-current[data-level="critical"] .ac-icon{color:var(--crit)}
+.alert-current strong{display:block;font-size:14px;letter-spacing:.3px;margin-bottom:4px}
+.alert-current p{font-size:12.5px;color:var(--ink-dim);line-height:1.55}
+.alert-current ul{list-style:none;margin-top:8px;font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+.alert-current li{padding:2px 0}
+.hist-title{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.4px;margin:20px 0 6px}
+.hist-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border-soft);font-size:12px;color:var(--ink-dim)}
+.hist-row:first-child{border-top:0}
+.hist-row time{font-family:var(--mono);font-size:11px;color:var(--ink-faint);width:44px;flex-shrink:0}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--ok)}
+.dot.warning{background:var(--warn)}.dot.critical{background:var(--crit)}
+
+/* ---------- sensors ---------- */
+.sensor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.sensor-card{padding:18px;box-shadow:inset 0 2px 0 var(--accent,var(--ok)),0 10px 30px -18px rgba(0,0,0,.7);transition:box-shadow .4s}
+.sensor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.sensor-id{font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600}
+.sensor-loc{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+.sensor-row{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-dim);padding:6px 0;border-top:1px solid var(--border-soft)}
+.sensor-row span:last-child{font-family:var(--mono);color:var(--ink)}
+.sim-tag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);border:1px solid var(--border);padding:3px 7px;border-radius:4px;letter-spacing:.3px}
+
+/* ---------- map ---------- */
+.map-tools{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-start}
+.map-layers{display:flex;gap:8px;flex-wrap:wrap}
+.layer-toggle{font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--panel-2);color:var(--ink-dim);cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.layer-toggle:hover{border-color:var(--border-hi)}
+.layer-toggle.active{border-color:var(--cyan-dim);color:var(--cyan);background:rgba(63,198,224,.08)}
+.map-hint{font-size:11.5px;color:var(--ink-faint);margin-bottom:12px}
+.map-wrap{position:relative}
+#assamMap{height:500px;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#0f151a}
+.map-fallback{display:flex;align-items:center;justify-content:center;height:100%;color:var(--ink-faint);font-size:13px;padding:20px;text-align:center}
+.map-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:14px;color:var(--ink-dim);font-size:11.5px}
+.map-legend span{display:flex;align-items:center;gap:6px}
+.map-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.leg-ok{background:var(--ok)}.leg-warn{background:var(--warn)}.leg-high{background:var(--high)}.leg-crit{background:var(--crit)}.leg-zone{background:var(--safe)}
+.map-note{margin-top:8px;font-size:11px;color:var(--ink-faint)}
+.district-info{margin-top:14px;padding:16px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px}
+.district-info strong{font-size:13px}
+.district-info p{color:var(--ink-dim);font-size:12px;margin-top:6px;line-height:1.6}
+.leaflet-container{font-family:var(--sans)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#141a20;color:var(--ink)}
+.leaflet-popup-content{font-size:12px;line-height:1.55}
+.leaflet-popup-content strong{color:var(--cyan)}
+.leaflet-tooltip.lbl{background:rgba(12,16,20,.9);color:var(--ink);border:1px solid var(--border-hi);font-family:var(--mono);font-size:10px;padding:2px 6px;box-shadow:none}
+.leaflet-tooltip.lbl::before{display:none}
+.riskMarker{width:16px;height:16px;border-radius:50%;border:3px solid var(--ink);box-shadow:0 0 8px rgba(0,0,0,.55)}
+.zoneMarker{width:14px;height:14px;border-radius:4px;border:2px solid var(--ink);box-shadow:0 0 8px rgba(0,0,0,.55)}
+.mapAlertBanner{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:1000;display:none;min-width:280px;max-width:90%;padding:11px 18px;
+  border:1px solid var(--crit);border-radius:9px;background:rgba(20,10,12,.94);text-align:center;color:var(--ink);font-weight:600;font-size:13px;letter-spacing:.3px}
+.mapAlertBanner.show{display:block}
+.mapAlertBanner[data-level="warning"]{border-color:var(--warn);background:rgba(24,18,8,.94)}
+.mapAlertBanner small{display:block;color:var(--ink-dim);font-weight:400;margin-top:3px;font-size:11px;letter-spacing:0}
+
+/* ---------- tiers ---------- */
+.tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tier{padding:20px;transition:border-color .3s,box-shadow .3s}
+.tier p{font-size:13px;color:var(--ink-dim);line-height:1.6;margin-top:12px}
+.tier.is-active{border-color:var(--tier-c);box-shadow:0 0 0 1px var(--tier-c),0 10px 30px -18px rgba(0,0,0,.7)}
+.tier[data-t="normal"]{--tier-c:var(--ok)}.tier[data-t="warning"]{--tier-c:var(--warn)}.tier[data-t="critical"]{--tier-c:var(--crit)}
+.tier .now{float:right;font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+
+/* ---------- response ---------- */
+.response-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+.resp-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border-soft);font-size:13px}
+.resp-row:first-of-type{border-top:0}
+.resp-row span:first-child{color:var(--ink-dim)}
+.resp-row span:last-child{font-family:var(--mono);font-weight:500;text-align:right}
+.rescue-status{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:5px}
+.proto-note{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);border:1px solid var(--border);padding:3px 8px;border-radius:4px}
+.safe-card{margin-top:16px;padding:20px;display:flex;gap:16px;align-items:flex-start;border-color:rgba(77,143,234,.35);background:linear-gradient(160deg,rgba(77,143,234,.09),rgba(20,26,32,.8))}
+.safe-card .ico{font-size:26px;color:var(--safe);margin-top:2px}
+.safe-card strong{display:block;font-size:14px;letter-spacing:.3px}
+.safe-card p{font-size:12.5px;color:var(--ink-dim);margin-top:2px}
+.zone-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--safe);background:rgba(77,143,234,.1);border:1px solid rgba(77,143,234,.3);padding:5px 10px;border-radius:6px;margin-top:10px}
+.zone-state{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.log-list{font-family:var(--mono);font-size:12px}
+.log-row{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--border-soft);color:var(--ink-dim)}
+.log-row:first-child{border-top:0}
+.log-row .t{color:var(--ink-faint);flex-shrink:0;width:42px}
+.log-row .dot{align-self:center}
+.cta-3d{margin-top:16px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  border-color:var(--cyan-dim);background:linear-gradient(120deg,rgba(63,198,224,.08),rgba(20,26,32,.8) 60%)}
+.cta-3d h3{font-size:16px;font-weight:600}
+.cta-3d p{font-size:12.5px;color:var(--ink-dim);margin-top:4px;max-width:520px}
+.cta-state{display:inline-block;margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--state)}
+.btn-lg{padding:14px 24px;font-size:14px}
+
+/* ---------- about / flow ---------- */
+.flow{display:flex;align-items:stretch;gap:12px;overflow-x:auto;padding-bottom:8px}
+.flow-step{min-width:200px;flex:1;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color .4s}
+.flow-step.on{border-color:var(--cyan-dim)}
+.flow-step.hot{border-color:rgba(var(--state-rgb),.55)}
+.flow-step .fn{font-family:var(--mono);color:var(--cyan);font-size:11px}
+.flow-step h3{font-size:13.5px;margin:10px 0 6px}
+.flow-step p{font-size:12px;color:var(--ink-dim);line-height:1.6}
+.flow-arrow{color:var(--ink-faint);font-size:16px;flex-shrink:0;align-self:center}
+
+footer{padding:36px 32px;border-top:1px solid var(--border-soft);display:flex;justify-content:space-between;color:var(--ink-faint);font-size:12px;flex-wrap:wrap;gap:14px}
+footer strong{color:var(--ink)}
+.foot-disc{width:100%;font-size:11.5px;border-top:1px solid var(--border-soft);padding-top:14px}
+
+/* ---------- dialog ---------- */
+dialog{margin:auto;background:var(--panel-solid);color:var(--ink);border:1px solid var(--border-hi);border-radius:14px;padding:26px;max-width:min(440px,92vw)}
+dialog::backdrop{background:rgba(5,8,11,.72)}
+dialog h3{font-size:16px;margin-bottom:8px}
+dialog p{font-size:13px;color:var(--ink-dim);line-height:1.6}
+dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
+.dlg-actions{margin-top:18px;display:flex;justify-content:flex-end}
+
+/* ---------- responsive ---------- */
+@media(max-width:1100px){
+  .cc-grid{grid-template-columns:1fr}
+  .sensor-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:960px){
+  .navlinks{display:none}
+  .menu-btn{display:inline-flex}
+  .hero{grid-template-columns:1fr;padding-top:52px}
+  .panel-grid,.response-grid,.tier-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  nav{padding:0 18px}.section,.hero{padding-left:18px;padding-right:18px}
+  footer{padding-left:18px;padding-right:18px}
+  .metric-grid,.sensor-grid{grid-template-columns:1fr}
+  #assamMap{height:400px}
+  .sysstatus span.txt{display:none}
+  .status-ring{width:140px;height:140px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#command-center">Skip to Command Center</a>
+
+<nav aria-label="Primary">
+  <a class="brand" href="#overview"><span class="brand-mark"></span>VISIONFORGE</a>
+  <div class="navlinks">
+    <a href="#overview" data-nav="overview">Overview</a>
+    <a href="#command-center" data-nav="command-center">Command Center</a>
+    <a href="#live-map" data-nav="live-map">Live Map</a>
+    <a href="#monitoring" data-nav="monitoring">Monitoring</a>
+    <a href="#alerts" data-nav="alerts">Alerts</a>
+    <a href="#response" data-nav="response">Response</a>
+    <a href="#about" data-nav="about">About</a>
+  </div>
+  <div class="nav-right">
+    <div class="sysstatus"><span class="sysdot"></span><span class="txt">SYSTEM ONLINE</span></div>
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu"><span class="ico" id="menuIco" data-icon="menu"></span></button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#overview" data-nav="overview">Overview</a>
+  <a href="#command-center" data-nav="command-center">Command Center</a>
+  <a href="#live-map" data-nav="live-map">Live Map</a>
+  <a href="#monitoring" data-nav="monitoring">Monitoring</a>
+  <a href="#alerts" data-nav="alerts">Alerts</a>
+  <a href="#response" data-nav="response">Response</a>
+  <a href="#about" data-nav="about">About</a>
+</div>
+
+<main>
+<section id="overview" class="hero">
+  <div class="hero-seq">
+    <p class="eyebrow">Smart India Hackathon 2026 · PS 26192 · Disaster Management</p>
+    <h1>Flash flood prediction for hilly regions, built on multi-source data fusion.</h1>
+    <p class="desc">VisionForge combines rainfall, water level, soil moisture and slope-risk readings into a single early-warning state, shared across the dashboard, the live map and the alert system.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary" type="button" data-action="launch3d"><span class="ico" data-icon="cube"></span>Launch 3D Simulation</button>
+      <button class="btn btn-ghost" type="button" data-action="run"><span class="ico" data-icon="play"></span>Run Flood Simulation</button>
+      <a class="btn btn-ghost" href="#command-center">View Command Center</a>
+    </div>
+    <p class="hero-note">Prototype system. All sensor readings are simulated.</p>
+  </div>
+  <div class="overview-card">
+    <div class="oc-top"><p class="oc-label">OVERALL FLOOD RISK</p><span class="sim-chip">SIMULATED DATA</span></div>
+    <div class="status-ring" id="statusRing"><span id="statusText">NORMAL</span><small>current state</small></div>
+    <div class="oc-meta"><span>Updated <span id="clock">--:--:--</span></span><span id="scoreText">Score 0/100</span></div>
+  </div>
+</section>
+
+<section id="command-center" class="section">
+  <div class="section-head">
+    <div><p class="section-tag">PROTOTYPE RISK MODEL</p><h2>Command Center</h2></div>
+    <div class="head-actions">
+      <button class="btn btn-ghost btn-sm" type="button" data-action="run"><span class="ico" data-icon="play"></span>Run flood simulation</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-action="reset"><span class="ico" data-icon="reset"></span>Reset</button>
+    </div>
+  </div>
+
+  <div class="cc-grid">
+    <div class="status-panel beam" id="statusPanel">
+      <div class="sp-head"><span class="sp-label">OVERALL FLOOD RISK</span><span class="model-tag">Prototype Risk Model</span></div>
+      <div class="sp-status" id="ccStatus" aria-live="polite">NORMAL</div>
+      <div class="sp-score"><span id="ccScore">0</span><small> / 100</small></div>
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <div class="g-seg g-ok on" id="seg-normal"></div><div class="g-seg g-warn" id="seg-warning"></div><div class="g-seg g-crit" id="seg-critical"></div>
+        </div>
+        <div class="gauge-marker" id="gaugeMarker"></div>
+        <div class="gauge-scale"><span style="left:0">0</span><span style="left:40%">40</span><span style="left:70%">70</span><span style="left:100%">100</span></div>
+      </div>
+      <div class="sp-weights"><span>Rainfall 30%</span><span>Water level 30%</span><span>Soil moisture 20%</span><span>Slope risk 20%</span></div>
+    </div>
+    <div class="metric-grid" id="metricGrid"></div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head"><h3>Rainfall and water-level trend</h3><span class="live-tag"><i></i>LIVE</span></div>
+        <div class="chart-box"><canvas id="chartFlow" aria-label="Rainfall and water level trend chart" role="img"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Risk progression</h3><span class="section-tag">Warning at 40 · Critical at 70</span></div>
+        <div class="chart-box"><canvas id="chartRisk" aria-label="Risk score progression chart" role="img"></canvas></div>
+      </div>
+    </div>
+    <div class="panel" id="alerts">
+      <div class="panel-head"><h3>Alert system</h3><span class="live-tag"><i></i>ACTIVE</span></div>
+      <div class="alert-current" id="alertCurrent" data-level="normal" role="status" aria-live="polite">
+        <span class="ico ac-icon" id="acIcon"></span>
+        <div><strong id="acTitle">SYSTEM MONITORING ACTIVE</strong><p id="acMsg"></p><ul id="acLines"></ul></div>
+      </div>
+      <p class="hist-title">ALERT HISTORY</p>
+      <div id="alertHistory"></div>
+    </div>
+  </div>
+</section>
+
+<section id="live-map" class="section">
+  <div class="section-head">
+    <div><p class="section-tag">DISTRICT-LEVEL EARLY WARNING</p><h2>Assam Flood Risk Map</h2></div>
+    <span class="live-tag"><i></i>MAP ONLINE</span>
+  </div>
+  <div class="map-tools">
+    <div class="map-layers" id="mapLayers" role="group" aria-label="Map layers">
+      <button class="layer-toggle active" type="button" data-layer="districts" aria-pressed="true">Risk zones</button>
+      <button class="layer-toggle active" type="button" data-layer="sensors" aria-pressed="true">Sensors</button>
+      <button class="layer-toggle active" type="button" data-layer="villages" aria-pressed="true">Villages</button>
+      <button class="layer-toggle active" type="button" data-layer="river" aria-pressed="true">River</button>
+      <button class="layer-toggle" type="button" data-layer="roads" aria-pressed="false">Roads and bridge</button>
+      <button class="layer-toggle active" type="button" data-layer="affected" aria-pressed="true">Affected area</button>
+      <button class="layer-toggle active" type="button" data-layer="stations" aria-pressed="true">Emergency station</button>
+      <button class="layer-toggle active" type="button" data-layer="safe" aria-pressed="true">Safe zone</button>
+      <button class="layer-toggle active" type="button" data-layer="rescue" aria-pressed="true">Rescue unit</button>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-ghost btn-sm" type="button" data-action="focus"><span class="ico" data-icon="target"></span>Focus Village Zone A</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-action="mapreset">Reset view</button>
+    </div>
+  </div>
+  <p class="map-hint" id="mapHint">Site layers (sensors, villages, river, safe zone, rescue) appear when you zoom in. Use Focus Village Zone A to jump there.</p>
+  <div class="map-wrap">
+    <div id="assamMap"></div>
+    <div id="mapAlertBanner" class="mapAlertBanner" data-level="critical"><span id="mapAlertTitle">CRITICAL FLOOD ALERT</span><small id="mapAlertText"></small></div>
+  </div>
+  <div class="map-legend">
+    <span><i class="leg-ok"></i>Normal</span><span><i class="leg-warn"></i>Warning</span>
+    <span><i class="leg-high"></i>High risk (affected area)</span><span><i class="leg-crit"></i>Critical</span><span><i class="leg-zone"></i>Safe zone</span>
+  </div>
+  <p class="map-note">District risk follows the shared system state with simulated regional offsets. River course, village and facility positions are illustrative.</p>
+  <div id="districtInfo" class="district-info">
+    <strong>Select a district on the map</strong>
+    <p>Shows its simulated flood-risk level and the recommended response.</p>
+  </div>
+</section>
+
+<section id="monitoring" class="section">
+  <div class="section-head">
+    <div><p class="section-tag">SIMULATED IoT DATA</p><h2>Sensor Monitoring</h2></div>
+    <span class="section-tag">4 active sensors · fused into the shared system state</span>
+  </div>
+  <div class="sensor-grid" id="sensorGrid"></div>
+</section>
+
+<section id="alerts-detail" class="section">
+  <div class="section-head"><div><p class="section-tag">EARLY WARNING</p><h2>Alert Tiers</h2></div><span class="section-tag" id="tierNow">Current tier: NORMAL</span></div>
+  <div class="tier-grid">
+    <div class="tier spot" id="tier-normal" data-t="normal"><span class="metric-badge badge-ok">NORMAL</span><span class="now"></span>
+      <p>System monitoring active. No unusual environmental readings.</p></div>
+    <div class="tier spot" id="tier-warning" data-t="warning"><span class="metric-badge badge-warn">WARNING</span><span class="now"></span>
+      <p>Flash flood warning. Increased risk detected in a village zone. Prepare for possible evacuation.</p></div>
+    <div class="tier spot" id="tier-critical" data-t="critical"><span class="metric-badge badge-crit">CRITICAL</span><span class="now"></span>
+      <p>Critical flood alert. Immediate evacuation recommended for the affected area.</p></div>
+  </div>
+</section>
+
+<section id="response" class="section">
+  <div class="section-head"><div><p class="section-tag">INCIDENT STATUS</p><h2>Response</h2></div><span class="sim-chip">PROTOTYPE · SIMULATED</span></div>
+  <div class="response-grid">
+    <div>
+      <div class="panel">
+        <div class="resp-row"><span>Incident status</span><span id="r-incident">No active incident</span></div>
+        <div class="resp-row"><span>Affected area</span><span id="r-area">None</span></div>
+        <div class="resp-row"><span>Evacuation status</span><span id="r-evac">Not required</span></div>
+        <div class="resp-row"><span>Safe zone</span><span id="r-zone">Safe Zone A</span></div>
+        <div class="resp-row"><span>Rescue team R-01</span><span class="rescue-status badge-ok" id="r-rescue">STANDBY</span></div>
+        <span class="proto-note">Simulated response workflow</span>
+      </div>
+      <div class="safe-card spot">
+        <span class="ico" data-icon="home"></span>
+        <div>
+          <strong>SAFE ZONE A</strong>
+          <p>Community Shelter</p>
+          <span class="zone-tag">Prototype Designated Safe Zone</span>
+          <p class="zone-state" id="safeState">Standby. Not a certified emergency shelter.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Activity log</h3><span class="live-tag"><i></i>LIVE</span></div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+  <div class="cta-3d">
+    <div>
+      <h3>Open the live 3D simulation</h3>
+      <p>The separate VisionForge 3D prototype reads the same system state as this dashboard, so the flood, alert and evacuation you see here match what it shows.</p>
+      <span class="cta-state" id="ctaState">Current state: NORMAL · 0/100</span>
+    </div>
+    <button class="btn btn-primary btn-lg" type="button" data-action="launch3d"><span class="ico" data-icon="cube"></span>Open Live 3D Simulation</button>
+  </div>
+</section>
+
+<section id="about" class="section">
+  <div class="section-head"><div><p class="section-tag">HOW IT WORKS</p><h2>From data to early warning</h2></div></div>
+  <div class="flow">
+    <div class="flow-step on" data-step="1"><span class="fn">01</span><h3>Data collection</h3><p>Rainfall, water level, soil moisture and slope-risk readings are collected from four sensor zones.</p></div>
+    <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+    <div class="flow-step on" data-step="2"><span class="fn">02</span><h3>Fusion</h3><p>Readings are combined into one shared system state used across the whole dashboard.</p></div>
+    <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+    <div class="flow-step on" data-step="3"><span class="fn">03</span><h3>Risk engine</h3><p>A weighted prototype model scores the state as Normal, Warning or Critical.</p></div>
+    <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+    <div class="flow-step" data-step="4"><span class="fn">04</span><h3>Early warning</h3><p>Alerts, the live map and response status update together from the same state.</p></div>
+    <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+    <div class="flow-step" data-step="5"><span class="fn">05</span><h3>Response</h3><p>Affected areas, safe zones and rescue teams are tracked until the state clears.</p></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div><strong>VisionForge</strong><p>Flash Flood Prediction System for Hilly Regions</p></div>
+  <div><p>Smart India Hackathon 2026</p><p>Problem Statement 26192 · Ministry of Home Affairs / NDRF</p></div>
+  <p class="foot-disc">Prototype. Sensor data is simulated and the risk thresholds are illustrative, not certified flood-prediction values.</p>
+</footer>
+
+<dialog id="simDialog" aria-labelledby="simDlgTitle">
+  <h3 id="simDlgTitle">3D simulation is not connected yet</h3>
+  <p>The VisionForge 3D prototype is being built separately. Once it is hosted, set <code>SIM_3D_URL</code> at the top of the script in this file and this button will open it with the current system state.</p>
+  <div class="dlg-actions"><button class="btn btn-primary btn-sm" type="button" id="simDlgClose">Got it</button></div>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+"use strict";
+/* ===================================================================
+   CONFIG — edit this when the 3D simulation is hosted
+   =================================================================== */
+const SIM_3D_URL = "";               // e.g. "https://your-host/visionforge-3d/index.html"
+const CHANNEL = "visionforge-state"; // BroadcastChannel / localStorage key for the 3D module
+const LOCAL_MIN_ZOOM = 10;           // site-level map layers appear from this zoom
+
+/* ===================================================================
+   helpers
+   =================================================================== */
+const REDUCED = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = a => (Math.random() - .5) * 2 * a;
+const hhmm = () => new Date().toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"});
+const hhmmss = d => (d || new Date()).toLocaleTimeString("en-GB");
+
+const HEX = {NORMAL: "#3ecf7e", WARNING: "#f0a83c", CRITICAL: "#ef5262"};
+const RANK = {NORMAL: 0, WARNING: 1, CRITICAL: 2};
+const CSSVAR = {NORMAL: "var(--ok)", WARNING: "var(--warn)", CRITICAL: "var(--crit)"};
+const BADGE = {NORMAL: "badge-ok", WARNING: "badge-warn", CRITICAL: "badge-crit"};
+
+const ICONS = {
+  "cloud-rain": '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/>',
+  "waves": '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>',
+  "droplet": '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  "mountain": '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>',
+  "cube": '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  "play": '<polygon points="6 3 20 12 6 21 6 3"/>',
+  "reset": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  "target": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  "menu": '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+  "x": '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  "alert": '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  "shield": '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  "home": '<path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'
+};
+const svg = n => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (ICONS[n] || "") + "</svg>";
+function hydrateIcons(root) {
+  (root || document).querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = svg(el.getAttribute("data-icon")); });
+}
+
+/* number ticker: animates a value change */
+function tween(el, to, dec) {
+  const from = parseFloat(el.dataset.v);
+  el.dataset.v = String(to);
+  const min = Math.pow(10, -dec) / 2;
+  if (REDUCED || isNaN(from) || Math.abs(from - to) < min) { el.textContent = to.toFixed(dec); return; }
+  if (el._raf) cancelAnimationFrame(el._raf);
+  const t0 = performance.now(), dur = 500;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = (from + (to - from) * e).toFixed(dec);
+    if (p < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+
+/* ===================================================================
+   shared system state — the single source of truth
+   =================================================================== */
+const state = {
+  rainfall: 42, waterLevel: 1.2, soilMoisture: 38, slopeRisk: 22,
+  risk: 0, status: "NORMAL", affectedArea: null, alert: null, rescueStatus: "STANDBY", incident: "No active incident"
+};
+
+/* four simulated IoT sensors; state is the FUSED average of these */
+const sensors = [
+  {id: "S01", loc: "Upper Catchment", lat: 26.090, lng: 91.800, rainfall: 46, water: 1.1, soil: 41, slope: 26, off: {r: 4, w: -.1, s: 3, sl: 4}},
+  {id: "S02", loc: "River Edge",      lat: 26.185, lng: 91.742, rainfall: 44, water: 1.4, soil: 36, slope: 19, off: {r: 2, w: .2, s: -2, sl: -3}},
+  {id: "S03", loc: "Village Lowland", lat: 26.170, lng: 91.745, rainfall: 39, water: 1.0, soil: 35, slope: 15, off: {r: -3, w: -.2, s: -3, sl: -7}},
+  {id: "S04", loc: "Slope Zone",      lat: 26.110, lng: 91.750, rainfall: 41, water: 1.2, soil: 39, slope: 32, off: {r: -1, w: 0, s: 1, sl: 10}}
+];
+const BASE   = {rainfall: 42, water: 1.2, soil: 38, slope: 22};
+const WARN_T = {rainfall: 66, water: 2.0, soil: 62, slope: 55};
+const CRIT_T = {rainfall: 93, water: 2.9, soil: 84, slope: 78};
+
+/* ---------- prototype risk model: 30 / 30 / 20 / 20 ---------- */
+function scoresOf(r, w, so, sl) { return {rain: Math.min(100, r * 1.05), water: Math.min(100, w * 35), soil: so, slope: sl}; }
+function computeRisk(r, w, so, sl) {
+  const s = scoresOf(r, w, so, sl);
+  return Math.round(s.rain * .3 + s.water * .3 + s.soil * .2 + s.slope * .2);
+}
+function tier(v) { return v >= 70 ? "CRITICAL" : v >= 40 ? "WARNING" : "NORMAL"; }
+/* small hysteresis on the way down so the state does not flicker at a boundary */
+function nextStatus(risk, prev) {
+  const raw = tier(risk);
+  if (RANK[raw] >= RANK[prev]) return raw;
+  const floor = prev === "CRITICAL" ? 70 : 40;
+  return risk <= floor - 3 ? raw : prev;
+}
+function fuse() {
+  const n = sensors.length, avg = k => sensors.reduce((a, s) => a + s[k], 0) / n;
+  state.rainfall = avg("rainfall"); state.waterLevel = avg("water");
+  state.soilMoisture = avg("soil"); state.slopeRisk = avg("slope");
+}
+function stepSensors(target, k, noise) {
+  sensors.forEach(s => {
+    s.rainfall = clamp(s.rainfall + (target.rainfall + s.off.r - s.rainfall) * k + rand(6 * noise), 0, 100);
+    s.water = clamp(s.water + (target.water + s.off.w - s.water) * k + rand(.16 * noise), .3, 4);
+    s.soil = clamp(s.soil + (target.soil + s.off.s - s.soil) * k + rand(3 * noise), 10, 100);
+    s.slope = clamp(s.slope + (target.slope + s.off.sl - s.slope) * k + rand(3 * noise), 5, 100);
+  });
+}
+
+/* ---------- history (for trends + charts) ---------- */
+const HMAX = 24;
+const hist = {t: [], rain: [], water: [], soil: [], slope: [], risk: []};
+function pushHist(date) {
+  hist.t.push(hhmmss(date));
+  hist.rain.push(+state.rainfall.toFixed(1)); hist.water.push(+state.waterLevel.toFixed(2));
+  hist.soil.push(+state.soilMoisture.toFixed(1)); hist.slope.push(+state.slopeRisk.toFixed(1)); hist.risk.push(state.risk);
+  if (hist.t.length > HMAX) Object.keys(hist).forEach(k => hist[k].shift());
+}
+
+/* ===================================================================
+   command center — metric cards
+   =================================================================== */
+const METRICS = [
+  {key: "rain",  label: "RAINFALL",      icon: "cloud-rain", unit: "mm/h", dec: 0, get: () => state.rainfall,     score: v => Math.min(100, v * 1.05), eps: 2},
+  {key: "water", label: "WATER LEVEL",   icon: "waves",      unit: "m",    dec: 1, get: () => state.waterLevel,   score: v => Math.min(100, v * 35),   eps: .08},
+  {key: "soil",  label: "SOIL MOISTURE", icon: "droplet",    unit: "%",    dec: 0, get: () => state.soilMoisture, score: v => v,                       eps: 1.5},
+  {key: "slope", label: "SLOPE RISK",    icon: "mountain",   unit: "%",    dec: 0, get: () => state.slopeRisk,    score: v => v,                       eps: 1.5}
+];
+function buildMetrics() {
+  $("metricGrid").innerHTML = METRICS.map(m =>
+    '<div class="metric spot"><div class="metric-top"><span class="metric-label"><span class="ico" data-icon="' + m.icon + '"></span>' + m.label + '</span>' +
+    '<span class="metric-badge badge-ok" id="b-' + m.key + '">NORMAL</span></div>' +
+    '<div class="metric-val"><span id="v-' + m.key + '">0</span><small> ' + m.unit + '</small></div>' +
+    '<div class="metric-trend" id="tr-' + m.key + '">Steady</div>' +
+    '<div class="metric-bar"><div id="bar-' + m.key + '"></div></div></div>'
+  ).join("");
+  hydrateIcons($("metricGrid"));
+}
+function trendOf(arr, eps) {
+  if (arr.length < 2) return {cls: "", text: "Steady"};
+  const d = arr[arr.length - 1] - arr[Math.max(0, arr.length - 4)];
+  if (d > eps) return {cls: "up", text: "\u2191 Rising"};
+  if (d < -eps) return {cls: "down", text: "\u2193 Falling"};
+  return {cls: "", text: "Steady"};
+}
+function renderMetrics() {
+  METRICS.forEach(m => {
+    const v = m.get(), t = tier(m.score(v));
+    tween($("v-" + m.key), v, m.dec);
+    const bar = $("bar-" + m.key);
+    bar.style.width = clamp(m.score(v), 0, 100) + "%"; bar.style.background = CSSVAR[t];
+    const b = $("b-" + m.key); b.textContent = t; b.className = "metric-badge " + BADGE[t];
+    const tr = trendOf(hist[m.key], m.eps), el = $("tr-" + m.key);
+    el.textContent = tr.text; el.className = "metric-trend " + tr.cls;
+  });
+}
+function renderStatus() {
+  const s = state.status, lc = s.toLowerCase();
+  document.documentElement.setAttribute("data-state", lc);
+  $("ccStatus").textContent = s;
+  tween($("ccScore"), state.risk, 0);
+  $("gaugeMarker").style.left = clamp(state.risk, 0, 100) + "%";
+  ["normal", "warning", "critical"].forEach(k => $("seg-" + k).classList.toggle("on", k === lc));
+  $("statusText").textContent = s;
+  $("scoreText").textContent = "Score " + state.risk + "/100";
+  $("clock").textContent = hhmmss();
+  $("ctaState").textContent = "Current state: " + s + " \u00b7 " + state.risk + "/100";
+  $("tierNow").textContent = "Current tier: " + s;
+  ["normal", "warning", "critical"].forEach(k => {
+    const el = $("tier-" + k); el.classList.toggle("is-active", k === lc);
+    el.querySelector(".now").textContent = k === lc ? "ACTIVE" : "";
+  });
+  const hot4 = RANK[s] >= 1, hot5 = RANK[s] >= 2;
+  document.querySelectorAll(".flow-step").forEach(el => {
+    const n = el.getAttribute("data-step");
+    el.classList.toggle("hot", (n === "4" && hot4) || (n === "5" && hot5));
+  });
+}
+
+/* ===================================================================
+   sensor cards (built once, updated in place)
+   =================================================================== */
+function buildSensors() {
+  const grid = $("sensorGrid");
+  sensors.forEach(s => {
+    const el = document.createElement("article");
+    el.className = "sensor-card spot";
+    el.innerHTML =
+      '<div class="sensor-head"><div><div class="sensor-id">' + s.id + '</div><div class="sensor-loc">' + s.loc + '</div></div>' +
+      '<span class="metric-badge badge-ok" data-f="badge">NORMAL</span></div>' +
+      '<div class="sensor-row"><span>Rainfall</span><span data-f="rain"></span></div>' +
+      '<div class="sensor-row"><span>Water level</span><span data-f="water"></span></div>' +
+      '<div class="sensor-row"><span>Soil moisture</span><span data-f="soil"></span></div>' +
+      '<div class="sensor-row"><span>Slope risk</span><span data-f="slope"></span></div>' +
+      '<div class="sensor-row"><span>Status</span><span data-f="status"></span></div>' +
+      '<span class="sim-tag">SIMULATED IoT DATA</span>';
+    grid.appendChild(el);
+    s.el = {card: el};
+    ["badge", "rain", "water", "soil", "slope", "status"].forEach(f => { s.el[f] = el.querySelector('[data-f="' + f + '"]'); });
+  });
+}
+function sensorStatus(s) { return tier(computeRisk(s.rainfall, s.water, s.soil, s.slope)); }
+function renderSensors() {
+  sensors.forEach(s => {
+    const t = sensorStatus(s);
+    s.el.rain.textContent = Math.round(s.rainfall) + " mm/h";
+    s.el.water.textContent = s.water.toFixed(1) + " m";
+    s.el.soil.textContent = Math.round(s.soil) + "%";
+    s.el.slope.textContent = Math.round(s.slope) + "%";
+    s.el.status.textContent = t; s.el.status.style.color = CSSVAR[t];
+    s.el.badge.textContent = t; s.el.badge.className = "metric-badge " + BADGE[t];
+    s.el.card.style.setProperty("--accent", CSSVAR[t]);
+  });
+}
+
+/* ===================================================================
+   charts (Chart.js) — guarded so the page still works if the CDN is blocked
+   =================================================================== */
+let chartFlow = null, chartRisk = null;
+function buildCharts() {
+  if (typeof Chart === "undefined") {
+    document.querySelectorAll(".chart-box").forEach(b => { b.className = "chart-box chart-fallback"; b.textContent = "Charts need the Chart.js library, which could not be loaded."; });
+    return;
+  }
+  const GRID = "#1e262e";
+  Chart.defaults.color = "#7a8896";
+  Chart.defaults.font.family = "'Inter',-apple-system,'Segoe UI',sans-serif";
+  const tip = {backgroundColor: "#141a20", borderColor: "#34414d", borderWidth: 1, titleColor: "#e7edf2", bodyColor: "#93a1af", padding: 10};
+  const base = {responsive: true, maintainAspectRatio: false, animation: {duration: 300}, interaction: {mode: "index", intersect: false}};
+  chartFlow = new Chart($("chartFlow").getContext("2d"), {type: "line",
+    data: {labels: [], datasets: [
+      {label: "Rainfall (mm/h)", data: [], borderColor: "#3fc6e0", backgroundColor: "rgba(63,198,224,.08)", fill: true, borderWidth: 2, tension: .35, pointRadius: 0, yAxisID: "y"},
+      {label: "Water level (m)", data: [], borderColor: "#f0a83c", backgroundColor: "transparent", borderWidth: 2, tension: .35, pointRadius: 0, yAxisID: "y1"}
+    ]},
+    options: Object.assign({}, base, {
+      plugins: {legend: {align: "end", labels: {boxWidth: 8, boxHeight: 8, usePointStyle: true, font: {size: 11}}}, tooltip: tip},
+      scales: {
+        x: {ticks: {maxTicksLimit: 6, maxRotation: 0, font: {size: 10}}, grid: {color: GRID}},
+        y: {min: 0, max: 100, ticks: {font: {size: 10}}, grid: {color: GRID}, title: {display: true, text: "mm/h", font: {size: 10}}},
+        y1: {position: "right", min: 0, max: 4, ticks: {font: {size: 10}}, grid: {drawOnChartArea: false}, title: {display: true, text: "m", font: {size: 10}}}
+      }})
+  });
+  chartRisk = new Chart($("chartRisk").getContext("2d"), {type: "line",
+    data: {labels: [], datasets: [
+      {label: "Risk score", data: [], borderColor: "#3ecf7e", backgroundColor: "rgba(63,198,224,.07)", fill: true, borderWidth: 2, tension: .3, pointRadius: 0,
+        segment: {borderColor: c => HEX[tier(c.p1.parsed.y)]}},
+      {label: "Warning (40)", data: [], borderColor: "rgba(240,168,60,.55)", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, fill: false},
+      {label: "Critical (70)", data: [], borderColor: "rgba(239,82,98,.55)", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, fill: false}
+    ]},
+    options: Object.assign({}, base, {
+      plugins: {legend: {align: "end", labels: {boxWidth: 8, boxHeight: 8, usePointStyle: true, font: {size: 11}}}, tooltip: tip},
+      scales: {
+        x: {ticks: {maxTicksLimit: 6, maxRotation: 0, font: {size: 10}}, grid: {color: GRID}},
+        y: {min: 0, max: 100, ticks: {font: {size: 10}, stepSize: 20}, grid: {color: GRID}}
+      }})
+  });
+}
+function updateCharts() {
+  if (chartFlow) {
+    chartFlow.data.labels = hist.t.slice();
+    chartFlow.data.datasets[0].data = hist.rain.slice();
+    chartFlow.data.datasets[1].data = hist.water.slice();
+    chartFlow.update();
+  }
+  if (chartRisk) {
+    const n = hist.t.length;
+    chartRisk.data.labels = hist.t.slice();
+    chartRisk.data.datasets[0].data = hist.risk.slice();
+    chartRisk.data.datasets[1].data = new Array(n).fill(40);
+    chartRisk.data.datasets[2].data = new Array(n).fill(70);
+    chartRisk.update();
+  }
+}
+
+/* ===================================================================
+   alerts, activity log, response panel
+   =================================================================== */
+const ALERTS = {
+  NORMAL:   {level: "normal",   title: "SYSTEM MONITORING ACTIVE", msg: "All monitored parameters are within the normal range. No flood threat detected.", lines: []},
+  WARNING:  {level: "warning",  title: "FLASH FLOOD WARNING",      msg: "Increased flood risk detected in Village Zone A. Prepare for possible evacuation.", lines: []},
+  CRITICAL: {level: "critical", title: "CRITICAL FLOOD ALERT",     msg: "Immediate evacuation recommended.", lines: ["Affected Area: Village Zone A", "Safe Zone: Community Shelter A"]}
+};
+const alertHistory = [], logs = [];
+
+function renderAlert() {
+  const a = ALERTS[state.status];
+  $("alertCurrent").setAttribute("data-level", a.level);
+  $("acIcon").innerHTML = svg(a.level === "normal" ? "shield" : "alert");
+  $("acTitle").textContent = a.title;
+  $("acMsg").textContent = a.msg;
+  const ul = $("acLines"); ul.innerHTML = "";
+  a.lines.forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+}
+function rowWithDot(cls, time, text, timeTag) {
+  const row = document.createElement("div"); row.className = cls;
+  const d = document.createElement("span"); d.className = "dot " + text.level;
+  const t = document.createElement(timeTag); t.textContent = time;
+  const m = document.createElement("span"); m.textContent = text.msg;
+  if (timeTag === "span") t.className = "t";
+  row.appendChild(t); row.appendChild(d); row.appendChild(m);
+  return row;
+}
+function renderAlertHistory() {
+  const box = $("alertHistory"); box.innerHTML = "";
+  alertHistory.forEach(h => box.appendChild(rowWithDot("hist-row", h.time, {level: h.level, msg: h.title}, "time")));
+}
+function pushAlertHistory(status) {
+  const a = ALERTS[status];
+  alertHistory.unshift({time: hhmm(), level: a.level, title: a.title});
+  if (alertHistory.length > 5) alertHistory.pop();
+  renderAlertHistory();
+}
+function pushLog(msg, level) {
+  logs.unshift({time: hhmm(), level: level || "normal", msg: msg});
+  if (logs.length > 8) logs.pop();
+  const box = $("logList"); box.innerHTML = "";
+  logs.forEach(l => box.appendChild(rowWithDot("log-row", l.time, {level: l.level, msg: l.msg}, "span")));
+}
+
+function applyStatusEffects(announce, prev) {
+  const s = state.status;
+  state.affectedArea = s === "NORMAL" ? null : "Village Zone A";
+  state.rescueStatus = s === "CRITICAL" ? "RESPONDING" : "STANDBY";
+  state.incident = s === "CRITICAL" ? "Active incident" : s === "WARNING" ? "Watch: warning issued" : "No active incident";
+  state.alert = ALERTS[s].title;
+  renderAlert();
+  if (!announce) return;
+  pushAlertHistory(s);
+  if (s === "WARNING") {
+    pushLog("WARNING state activated", "warning");
+    if (RANK[prev] < 1) pushLog("Community alert generated", "warning");
+    else pushLog("Risk eased from CRITICAL to WARNING", "warning");
+  } else if (s === "CRITICAL") {
+    pushLog("CRITICAL state activated", "critical");
+    pushLog("Rescue team R-01 dispatched (simulated)", "critical");
+  } else {
+    pushLog("System returned to NORMAL state", "normal");
+  }
+}
+function renderResponse() {
+  const s = state.status;
+  $("r-incident").textContent = state.incident;
+  $("r-area").textContent = state.affectedArea || "None";
+  $("r-evac").textContent = s === "CRITICAL" ? "Evacuation recommended" : s === "WARNING" ? "Prepare to evacuate" : "Not required";
+  $("r-zone").textContent = s === "CRITICAL" ? "Safe Zone A (active)" : "Safe Zone A";
+  const r = $("r-rescue");
+  r.textContent = state.rescueStatus;
+  r.className = "rescue-status " + (state.rescueStatus === "RESPONDING" ? "badge-crit" : "badge-ok");
+  $("safeState").textContent = s === "CRITICAL" ? "Evacuation destination. Not a certified emergency shelter." : "Standby. Not a certified emergency shelter.";
+}
+
+/* ===================================================================
+   shared-state publishing (for the separate 3D module)
+   =================================================================== */
+const listeners = new Set();
+let channel = null;
+try { if ("BroadcastChannel" in window) channel = new BroadcastChannel(CHANNEL); } catch (e) { channel = null; }
+function snapshot() {
+  return {
+    rainfall: +state.rainfall.toFixed(1), waterLevel: +state.waterLevel.toFixed(2),
+    soilMoisture: +state.soilMoisture.toFixed(1), slopeRisk: +state.slopeRisk.toFixed(1),
+    risk: state.risk, status: state.status, affectedArea: state.affectedArea, alert: state.alert, rescueStatus: state.rescueStatus,
+    sensors: sensors.map(s => ({id: s.id, rainfall: +s.rainfall.toFixed(1), waterLevel: +s.water.toFixed(2), soilMoisture: +s.soil.toFixed(1), slopeRisk: +s.slope.toFixed(1), status: sensorStatus(s)})),
+    updatedAt: Date.now()
+  };
+}
+function publish() {
+  const snap = snapshot();
+  listeners.forEach(fn => { try { fn(snap); } catch (e) { /* listener errors must not break the dashboard */ } });
+  try { if (channel) channel.postMessage(snap); } catch (e) { /* ignore */ }
+  try { window.localStorage.setItem(CHANNEL, JSON.stringify(snap)); } catch (e) { /* storage may be blocked */ }
+}
+
+/* ===================================================================
+   map (Leaflet) — guarded so a blocked CDN cannot break the page
+   =================================================================== */
+const DISTRICTS = [
+  {name: "Golaghat", lat: 26.00, lng: 93.72, off: -24},
+  {name: "Guwahati (Kamrup Metro)", lat: 26.14, lng: 91.74, off: 0, site: true},
+  {name: "Tezpur (Sonitpur)", lat: 26.63, lng: 92.80, off: -14},
+  {name: "Jorhat", lat: 26.75, lng: 94.22, off: -34},
+  {name: "Nagaon", lat: 26.35, lng: 92.68, off: -26},
+  {name: "Lakhimpur", lat: 27.24, lng: 94.10, off: -46},
+  {name: "Dibrugarh", lat: 27.47, lng: 94.91, off: -24}
+];
+const SITE = {village: [26.165, 91.735], shelter: [26.180, 91.790], station: [26.100, 91.700], rescueBase: [26.160, 91.760], rescueTarget: [26.1685, 91.741]};
+const NOTE = {
+  NORMAL: "No immediate simulated flood threat.",
+  WARNING: "Rising simulated risk. Monitor river and rainfall sensors.",
+  CRITICAL: "High simulated flood risk. Evacuation alert recommended for low-lying areas."
+};
+const LOCAL = ["sensors", "villages", "river", "roads", "affected", "stations", "safe", "rescue"];
+
+let MAP = null, selectedDistrict = null, groups = {}, enabled = {};
+let affectedCircle = null, rescueMarker = null, rescuePos = SITE.rescueBase.slice(), rescueRaf = null;
+const districtMarkers = {}, districtTier = {};
+
+function districtScore(d) { return clamp(Math.round(state.risk + d.off), 0, 100); }
+function riskIcon(t) {
+  return L.divIcon({className: "", html: '<div class="riskMarker" style="background:' + HEX[t] + '"></div>', iconSize: [16, 16], iconAnchor: [8, 8]});
+}
+function zoneIcon(color) {
+  return L.divIcon({className: "", html: '<div class="zoneMarker" style="background:' + color + '"></div>', iconSize: [14, 14], iconAnchor: [7, 7]});
+}
+function districtDetail(d) {
+  const sc = districtScore(d), t = tier(sc), ratio = state.risk > 0 ? sc / state.risk : 0;
+  return {sc: sc, t: t, rain: Math.round(clamp(state.rainfall * ratio, 0, 100)), water: clamp(state.waterLevel * ratio, 0, 4).toFixed(1)};
+}
+function districtPopup(d) {
+  const x = districtDetail(d);
+  return "<strong>" + d.name + "</strong><br>Risk: <b>" + x.t + "</b> (" + x.sc + "/100)<br>Rainfall: " + x.rain + " mm/h<br>Water level: " + x.water + " m<br><br>" + NOTE[x.t] +
+    (d.site ? "<br><i>Prototype monitoring site. Mirrors the system state.</i>" : "<br><i>Simulated regional outlook.</i>");
+}
+function renderDistrictInfo() {
+  const box = $("districtInfo");
+  if (!selectedDistrict) return;
+  const d = selectedDistrict, x = districtDetail(d);
+  box.innerHTML = "<strong>" + d.name + " \u2014 " + x.t + "</strong><p>Simulated rainfall: " + x.rain + " mm/h \u00b7 Water level: " + x.water + " m \u00b7 Score " + x.sc + "/100</p><p>" +
+    NOTE[x.t] + (d.site ? " This is the prototype monitoring site, so its readings mirror the Command Center." : " Regional outlook is simulated from the shared system state.") + "</p>";
+}
+
+function syncLayers() {
+  if (!MAP) return;
+  const z = MAP.getZoom();
+  Object.keys(groups).forEach(k => {
+    let want = !!enabled[k];
+    if (LOCAL.indexOf(k) !== -1) want = want && z >= LOCAL_MIN_ZOOM;
+    if (k === "districts") want = want && z < 12;
+    const has = MAP.hasLayer(groups[k]);
+    if (want && !has) MAP.addLayer(groups[k]);
+    if (!want && has) MAP.removeLayer(groups[k]);
+  });
+  $("mapHint").hidden = z >= LOCAL_MIN_ZOOM;
+}
+function focusSite() {
+  if (!MAP) return;
+  const target = [26.155, 91.755];
+  if (REDUCED) MAP.setView(target, 12); else MAP.flyTo(target, 12, {duration: 1.4});
+}
+function resetView() {
+  if (!MAP) return;
+  if (REDUCED) MAP.setView([26.35, 92.95], 7); else MAP.flyTo([26.35, 92.95], 7, {duration: 1.2});
+}
+function moveRescue(to) {
+  if (!rescueMarker) return;
+  if (rescueRaf) cancelAnimationFrame(rescueRaf);
+  const from = rescuePos.slice();
+  if (REDUCED) { rescuePos = to.slice(); rescueMarker.setLatLng(rescuePos); return; }
+  const t0 = performance.now(), dur = 3000;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    rescuePos = [from[0] + (to[0] - from[0]) * e, from[1] + (to[1] - from[1]) * e];
+    rescueMarker.setLatLng(rescuePos);
+    if (p < 1) rescueRaf = requestAnimationFrame(step);
+  };
+  rescueRaf = requestAnimationFrame(step);
+}
+
+function buildMap() {
+  const bounds = L.latLngBounds([24.0, 89.5], [28.4, 96.2]);
+  MAP = L.map("assamMap", {minZoom: 7, maxZoom: 17, maxBounds: bounds, maxBoundsViscosity: 1}).setView([26.35, 92.95], 7);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {maxZoom: 17, attribution: "Tiles &copy; Esri"}).addTo(MAP);
+
+  ["districts"].concat(LOCAL).forEach(k => { groups[k] = L.layerGroup(); enabled[k] = k !== "roads"; });
+
+  /* districts (risk follows the shared state) */
+  DISTRICTS.forEach(d => {
+    const t = tier(districtScore(d));
+    const m = L.marker([d.lat, d.lng], {icon: riskIcon(t), title: d.name}).addTo(groups.districts);
+    m.bindPopup(districtPopup(d));
+    m.on("click", () => { selectedDistrict = d; renderDistrictInfo(); });
+    districtMarkers[d.name] = m; districtTier[d.name] = t;
+  });
+
+  /* sensors */
+  sensors.forEach(s => {
+    s.marker = L.circleMarker([s.lat, s.lng], {radius: 8, weight: 3, color: "#e7edf2", fillColor: HEX.NORMAL, fillOpacity: 1}).addTo(groups.sensors);
+    s.marker.bindTooltip(s.id, {permanent: true, direction: "top", offset: [0, -8], className: "lbl"});
+    s.marker.bindPopup("<strong>" + s.id + " \u2014 " + s.loc + "</strong><br>Simulated IoT data");
+  });
+
+  /* villages */
+  [{n: "Village Zone A", p: SITE.village}, {n: "Village Zone B", p: [26.135, 91.775]}].forEach(v => {
+    L.circleMarker(v.p, {radius: 6, weight: 2, color: "#e7edf2", fillColor: "#93a1af", fillOpacity: 1}).addTo(groups.villages)
+      .bindTooltip(v.n, {permanent: true, direction: "bottom", offset: [0, 6], className: "lbl"})
+      .bindPopup("<strong>" + v.n + "</strong><br>Illustrative village location");
+  });
+
+  /* river (illustrative course) */
+  L.polyline([[26.210, 91.600], [26.195, 91.660], [26.190, 91.720], [26.195, 91.780], [26.205, 91.840]],
+    {color: "#5ab8e6", weight: 4, opacity: .9, dashArray: "8 6"}).addTo(groups.river).bindTooltip("Brahmaputra (illustrative course)", {sticky: true, className: "lbl"});
+
+  /* roads and bridge (illustrative) */
+  L.polyline([SITE.station, [26.130, 91.720], SITE.village, [26.175, 91.765], SITE.shelter],
+    {color: "#c9d3dc", weight: 3, opacity: .85, dashArray: "2 8"}).addTo(groups.roads).bindTooltip("Access route to Community Shelter A (illustrative)", {sticky: true, className: "lbl"});
+  L.marker([26.1925, 91.748], {icon: zoneIcon("#c9d3dc")}).addTo(groups.roads).bindPopup("<strong>Bridge</strong><br>Illustrative river crossing");
+
+  /* affected area (added or removed by status) */
+  affectedCircle = L.circle(SITE.village, {radius: 1400, color: "#f2762e", weight: 2, fillColor: "#f2762e", fillOpacity: .18, dashArray: "6 6"});
+  affectedCircle.bindPopup("<strong>Affected area</strong><br>Village Zone A");
+
+  /* response assets */
+  L.marker(SITE.shelter, {icon: zoneIcon("#4d8fea")}).addTo(groups.safe).bindPopup("<strong>Safe Zone A \u2014 Community Shelter</strong><br>Prototype Designated Safe Zone");
+  L.circle(SITE.shelter, {radius: 450, color: "#4d8fea", weight: 1.5, fillColor: "#4d8fea", fillOpacity: .15}).addTo(groups.safe);
+  L.marker(SITE.station, {icon: zoneIcon("#93a1af")}).addTo(groups.stations).bindPopup("<strong>Emergency Response Station</strong><br>Prototype location");
+  rescueMarker = L.marker(rescuePos, {icon: zoneIcon("#3fc6e0"), zIndexOffset: 500}).addTo(groups.rescue);
+  rescueMarker.bindPopup("<strong>Rescue Team R-01</strong><br>Status: STANDBY");
+
+  MAP.on("zoomend", syncLayers);
+  syncLayers();
+
+  /* layer toggles */
+  document.querySelectorAll("#mapLayers .layer-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const k = btn.getAttribute("data-layer");
+      enabled[k] = !enabled[k];
+      btn.classList.toggle("active", enabled[k]);
+      btn.setAttribute("aria-pressed", String(enabled[k]));
+      syncLayers();
+    });
+  });
+  window.addEventListener("load", () => { if (MAP) MAP.invalidateSize(); });
+}
+
+function updateMap() {
+  if (!MAP) return;
+  const st = state.status;
+  DISTRICTS.forEach(d => {
+    const t = tier(districtScore(d)), m = districtMarkers[d.name];
+    if (districtTier[d.name] !== t) { m.setIcon(riskIcon(t)); districtTier[d.name] = t; }
+    m.setPopupContent(districtPopup(d));
+  });
+  renderDistrictInfo();
+  sensors.forEach(s => {
+    const t = sensorStatus(s);
+    s.marker.setStyle({fillColor: HEX[t]});
+    s.marker.setPopupContent("<strong>" + s.id + " \u2014 " + s.loc + "</strong><br>Status: <b>" + t + "</b><br>Rainfall: " + Math.round(s.rainfall) + " mm/h<br>Water level: " +
+      s.water.toFixed(1) + " m<br>Soil moisture: " + Math.round(s.soil) + "%<br>Slope risk: " + Math.round(s.slope) + "%<br><i>Simulated IoT data</i>");
+  });
+  if (st === "NORMAL") { groups.affected.removeLayer(affectedCircle); }
+  else {
+    const c = st === "CRITICAL" ? "#ef5262" : "#f2762e";
+    affectedCircle.setStyle({color: c, fillColor: c});
+    affectedCircle.setRadius(st === "CRITICAL" ? 2200 : 1400);
+    groups.affected.addLayer(affectedCircle);
+  }
+  rescueMarker.setPopupContent("<strong>Rescue Team R-01</strong><br>Status: " + state.rescueStatus);
+  const banner = $("mapAlertBanner");
+  if (st === "NORMAL") banner.classList.remove("show");
+  else {
+    banner.classList.add("show");
+    banner.setAttribute("data-level", st.toLowerCase());
+    $("mapAlertTitle").textContent = ALERTS[st].title;
+    $("mapAlertText").textContent = st === "CRITICAL" ? "Village Zone A \u00b7 Evacuate to Community Shelter A" : "Village Zone A \u00b7 Prepare for possible evacuation";
+  }
+}
+
+/* ===================================================================
+   simulation control + main loop
+   =================================================================== */
+let mode = "live", tickN = 0, simTarget = BASE, stageTimer = null, simFlags = {};
+
+function runSimulation() {
+  if (stageTimer) clearTimeout(stageTimer);
+  mode = "sim"; simTarget = WARN_T; simFlags = {};
+  pushLog("Flood simulation started (prototype scenario)", "normal");
+  stageTimer = setTimeout(() => { simTarget = CRIT_T; }, 7000);
+  const cc = $("command-center");
+  if (cc && cc.scrollIntoView) cc.scrollIntoView({behavior: REDUCED ? "auto" : "smooth", block: "start"});
+}
+function resetSimulation() {
+  if (stageTimer) clearTimeout(stageTimer);
+  mode = "reset"; simTarget = BASE; simFlags = {};
+  pushLog("Simulation reset. Returning to baseline", "normal");
+  moveRescue(SITE.rescueBase);
+  resetView();
+}
+function simChecks() {
+  if (!simFlags.s1) { simFlags.s1 = true; pushLog("Sensor S01 updated", "normal"); }
+  if (!simFlags.rain && state.rainfall >= 55) { simFlags.rain = true; pushLog("Rainfall increased to " + Math.round(state.rainfall) + " mm/h", "warning"); }
+  if (!simFlags.water && state.waterLevel >= 1.7) { simFlags.water = true; pushLog("Water level rising (" + state.waterLevel.toFixed(1) + " m)", "warning"); }
+}
+
+function renderAll() {
+  const prev = state.status;
+  state.risk = computeRisk(state.rainfall, state.waterLevel, state.soilMoisture, state.slopeRisk);
+  state.status = nextStatus(state.risk, prev);
+  if (state.status !== prev) applyStatusEffects(true, prev);
+  if (state.status !== prev && mode === "sim" && state.status === "CRITICAL") { moveRescue(SITE.rescueTarget); focusSite(); }
+  if (state.status !== prev && state.status !== "CRITICAL" && RANK[prev] === 2) moveRescue(SITE.rescueBase);
+  renderStatus(); renderMetrics(); renderSensors(); renderResponse(); updateCharts(); updateMap(); publish();
+}
+
+function loop() {
+  tickN++;
+  if (mode === "live") {
+    if (tickN % 5 !== 0) { $("clock").textContent = hhmmss(); return; }
+    stepSensors(BASE, .12, .5);
+  } else if (mode === "sim") {
+    stepSensors(simTarget, .3, .1);
+  } else {
+    stepSensors(BASE, .3, .1);
+  }
+  fuse();
+  if (mode === "sim") simChecks();
+  if (mode === "reset" && Math.abs(state.rainfall - 42.5) < 3 && Math.abs(state.waterLevel - 1.2) < .15) mode = "live";
+  pushHist();
+  renderAll();
+}
+
+/* ===================================================================
+   3D simulation launch
+   =================================================================== */
+function launch3D() {
+  if (SIM_3D_URL) {
+    try {
+      const u = new URL(SIM_3D_URL, window.location.href);
+      u.searchParams.set("status", state.status);
+      u.searchParams.set("risk", String(state.risk));
+      window.open(u.toString(), "_blank", "noopener");
+      return;
+    } catch (e) { /* invalid URL: fall through to the dialog */ }
+  }
+  const dlg = $("simDialog");
+  if (typeof dlg.showModal === "function") { if (!dlg.open) dlg.showModal(); }
+  else dlg.setAttribute("open", "");
+}
+
+/* ===================================================================
+   UI wiring: nav, actions, spotlight
+   =================================================================== */
+function wireUI() {
+  const btn = $("menuBtn"), menu = $("mobileMenu");
+  function setMenu(open) {
+    menu.classList.toggle("open", open);
+    btn.setAttribute("aria-expanded", String(open));
+    btn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    $("menuIco").innerHTML = svg(open ? "x" : "menu");
+  }
+  btn.addEventListener("click", () => setMenu(!menu.classList.contains("open")));
+  menu.querySelectorAll("a").forEach(a => a.addEventListener("click", () => setMenu(false)));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") setMenu(false); });
+  window.addEventListener("resize", () => { if (window.innerWidth > 960) setMenu(false); });
+
+  $("simDlgClose").addEventListener("click", () => { const d = $("simDialog"); if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); });
+
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
+    if (!b) return;
+    const a = b.getAttribute("data-action");
+    if (a === "run") runSimulation();
+    else if (a === "reset") resetSimulation();
+    else if (a === "launch3d") launch3D();
+    else if (a === "focus") focusSite();
+    else if (a === "mapreset") resetView();
+  });
+
+  /* spotlight hover */
+  document.addEventListener("pointermove", e => {
+    const c = e.target && e.target.closest ? e.target.closest(".spot") : null;
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty("--mx", (e.clientX - r.left) + "px");
+    c.style.setProperty("--my", (e.clientY - r.top) + "px");
+  }, {passive: true});
+
+  /* active nav link follows the section in view */
+  const map = {"overview": "overview", "command-center": "command-center", "live-map": "live-map", "monitoring": "monitoring", "alerts-detail": "alerts", "response": "response", "about": "about"};
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (!en.isIntersecting) return;
+        const key = map[en.target.id];
+        document.querySelectorAll("[data-nav]").forEach(a => {
+          if (a.getAttribute("data-nav") === key) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+        });
+      });
+    }, {rootMargin: "-35% 0px -60% 0px"});
+    Object.keys(map).forEach(id => { const el = $(id); if (el) io.observe(el); });
+  }
+}
+
+/* ===================================================================
+   public API for the 3D module / other scripts
+   =================================================================== */
+window.VisionForge = {
+  getState: snapshot,
+  subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+  runSimulation: runSimulation, reset: resetSimulation, launch3D: launch3D
+};
+
+/* ===================================================================
+   boot
+   =================================================================== */
+hydrateIcons();
+buildMetrics();
+buildSensors();
+buildCharts();
+
+if (typeof L !== "undefined") {
+  try { buildMap(); } catch (err) {
+    MAP = null;
+    $("assamMap").innerHTML = '<div class="map-fallback">The map could not be started. Check your internet connection and reload.</div>';
+  }
+} else {
+  $("assamMap").innerHTML = '<div class="map-fallback">The map library could not be loaded. Check your internet connection and reload.</div>';
+  $("mapLayers").querySelectorAll("button").forEach(b => { b.disabled = true; });
+}
+
+/* seed history so the charts are not empty on first load */
+(function seed() {
+  const now = Date.now();
+  for (let i = 11; i >= 1; i--) {
+    stepSensors(BASE, .5, .6); fuse();
+    state.risk = computeRisk(state.rainfall, state.waterLevel, state.soilMoisture, state.slopeRisk);
+    pushHist(new Date(now - i * 5000));
+  }
+})();
+fuse();
+state.risk = computeRisk(state.rainfall, state.waterLevel, state.soilMoisture, state.slopeRisk);
+state.status = tier(state.risk);
+applyStatusEffects(false, state.status);
+alertHistory.unshift({time: hhmm(), level: ALERTS[state.status].level, title: ALERTS[state.status].title});
+renderAlertHistory();
+pushLog("Sensor network initialized", "normal");
+wireUI();
+pushHist();
+renderAll();
+setInterval(loop, 1000);
+</script>
+</body>
+</html>
