@@ -293,6 +293,28 @@ dialog p{font-size:13px;color:var(--ink-dim);line-height:1.6}
 dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
 .dlg-actions{margin-top:18px;display:flex;justify-content:flex-end}
 
+
+/* ---------- support / community forms ---------- */
+.support-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.support-card{padding:22px}
+.support-card h3{font-size:16px;margin-bottom:7px}
+.support-card>p{font-size:12.5px;color:var(--ink-dim);line-height:1.6;margin-bottom:17px}
+.support-form{display:grid;gap:11px}
+.support-form label{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.25px}
+.support-form input,.support-form select,.support-form textarea{width:100%;border:1px solid var(--border);border-radius:7px;background:rgba(12,16,20,.72);color:var(--ink);padding:10px 11px;font:13px var(--sans);outline:none}
+.support-form input:focus,.support-form select:focus,.support-form textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(63,198,224,.1)}
+.support-form textarea{min-height:104px;resize:vertical}
+.support-form .field{display:grid;gap:6px}
+.support-form .form-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+.support-status{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);min-height:16px}
+.support-status.success{color:var(--ok)}
+.support-status.error{color:var(--crit)}
+.support-note{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+.support-card-wide{grid-column:1/-1}
+.donate-card{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.donate-copy{max-width:700px}
+@media(max-width:960px){.support-grid{grid-template-columns:1fr}.support-card-wide{grid-column:auto}}
+
 /* ---------- responsive ---------- */
 @media(max-width:1100px){
   .cc-grid{grid-template-columns:1fr}
@@ -330,6 +352,7 @@ dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
     <a href="#monitoring" data-nav="monitoring">Monitoring</a>
     <a href="#alerts" data-nav="alerts">Alerts</a>
     <a href="#response" data-nav="response">Response</a>
+    <a href="#support" data-nav="support">Support</a>
     <a href="#about" data-nav="about">About</a>
   </div>
   <div class="nav-right">
@@ -344,6 +367,7 @@ dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
   <a href="#monitoring" data-nav="monitoring">Monitoring</a>
   <a href="#alerts" data-nav="alerts">Alerts</a>
   <a href="#response" data-nav="response">Response</a>
+  <a href="#support" data-nav="support">Support</a>
   <a href="#about" data-nav="about">About</a>
 </div>
 
@@ -511,6 +535,79 @@ dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
   </div>
 </section>
 
+
+<section id="support" class="section">
+  <div class="section-head">
+    <div><p class="section-tag">COMMUNITY SUPPORT</p><h2>Support VisionForge</h2></div>
+    <span class="section-tag">Help improve awareness and the prototype</span>
+  </div>
+  <div class="support-grid">
+    <div class="panel support-card donate-card support-card-wide spot">
+      <div class="donate-copy">
+        <p class="section-tag">DONATE</p>
+        <h3>Support flood-affected communities</h3>
+        <p>Use the verified fundraiser linked below to make a donation. VisionForge does not process or store payment details.</p>
+        <p class="support-note">Donation payments are handled entirely by Milaap.</p>
+      </div>
+      <button class="btn btn-primary btn-lg" type="button" data-action="donate">Donate via Milaap</button>
+    </div>
+
+    <div class="panel support-card spot">
+      <p class="section-tag">STAY INFORMED</p>
+      <h3>Join the email list</h3>
+      <p>Receive project updates and important VisionForge information.</p>
+      <form class="support-form" id="subscribeForm" novalidate>
+        <div class="field">
+          <label for="subscribeEmail">EMAIL ADDRESS</label>
+          <input id="subscribeEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254">
+        </div>
+        <input type="hidden" name="_subject" value="VisionForge email subscription">
+        <input type="hidden" name="form_type" value="newsletter_subscription">
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Subscribe</button>
+          <span class="support-status" id="subscribeStatus" role="status" aria-live="polite"></span>
+        </div>
+        <p class="support-note">Your email is submitted securely through Formspree.</p>
+      </form>
+    </div>
+
+    <div class="panel support-card spot">
+      <p class="section-tag">FEEDBACK</p>
+      <h3>Tell us what you think</h3>
+      <p>Share a suggestion, report an issue, or tell us what would make the prototype more useful.</p>
+      <form class="support-form" id="feedbackForm" novalidate>
+        <div class="field">
+          <label for="feedbackName">NAME <span>(OPTIONAL)</span></label>
+          <input id="feedbackName" name="name" type="text" autocomplete="name" maxlength="100" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label for="feedbackEmail">EMAIL <span>(OPTIONAL)</span></label>
+          <input id="feedbackEmail" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="feedbackCategory">CATEGORY</label>
+          <select id="feedbackCategory" name="category">
+            <option value="general">General feedback</option>
+            <option value="bug">Report a problem</option>
+            <option value="suggestion">Suggestion</option>
+            <option value="accessibility">Accessibility</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="feedbackMessage">MESSAGE</label>
+          <textarea id="feedbackMessage" name="message" required maxlength="2000" placeholder="Write your feedback here..."></textarea>
+        </div>
+        <input type="hidden" name="_subject" value="VisionForge feedback">
+        <input type="hidden" name="form_type" value="feedback">
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Send feedback</button>
+          <span class="support-status" id="feedbackStatus" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
 <section id="about" class="section">
   <div class="section-head"><div><p class="section-tag">HOW IT WORKS</p><h2>From data to early warning</h2></div></div>
   <div class="flow">
@@ -546,6 +643,8 @@ dialog code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
    CONFIG — edit this when the 3D simulation is hosted
    =================================================================== */
 const SIM_3D_URL = "";               // e.g. "https://your-host/visionforge-3d/index.html"
+const MILAAP_URL = "PASTE_YOUR_MILAAP_FUNDRAISER_URL_HERE";
+const FORMSPREE_ENDPOINT = "PASTE_YOUR_FORMSPREE_ENDPOINT_HERE";
 const CHANNEL = "visionforge-state"; // BroadcastChannel / localStorage key for the 3D module
 const LOCAL_MIN_ZOOM = 10;           // site-level map layers appear from this zoom
 
@@ -1170,6 +1269,96 @@ function launch3D() {
 /* ===================================================================
    UI wiring: nav, actions, spotlight
    =================================================================== */
+function isConfigured(value, placeholder) {
+  return typeof value === "string" && value.trim() && value.trim() !== placeholder;
+}
+
+function setSupportStatus(id, message, type) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = message;
+  el.className = "support-status" + (type ? " " + type : "");
+}
+
+function setFormBusy(form, busy) {
+  form.querySelectorAll("button[type=submit]").forEach(btn => {
+    btn.disabled = busy;
+    btn.setAttribute("aria-busy", String(busy));
+  });
+}
+
+async function submitSupportForm(form, statusId, kind) {
+  if (!isConfigured(FORMSPREE_ENDPOINT, "PASTE_YOUR_FORMSPREE_ENDPOINT_HERE")) {
+    setSupportStatus(statusId, "Add your Formspree endpoint in the config first.", "error");
+    return;
+  }
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    setSupportStatus(statusId, "Please check the highlighted fields.", "error");
+    return;
+  }
+  if (kind === "newsletter_subscription") {
+    const email = form.elements.email.value.trim().toLowerCase();
+    let submitted = [];
+    try { submitted = JSON.parse(localStorage.getItem("visionforge_subscribed_emails") || "[]"); } catch (e) { submitted = []; }
+    if (submitted.includes(email)) {
+      setSupportStatus(statusId, "This email is already subscribed on this device.", "success");
+      return;
+    }
+  }
+
+  setFormBusy(form, true);
+  setSupportStatus(statusId, "Sending…", "");
+  try {
+    const response = await fetch(FORMSPREE_ENDPOINT, {
+      method: "POST",
+      headers: {"Accept": "application/json"},
+      body: new FormData(form)
+    });
+    if (!response.ok) throw new Error("Form submission failed");
+
+    if (kind === "newsletter_subscription") {
+      const email = form.elements.email.value.trim().toLowerCase();
+      let submitted = [];
+      try { submitted = JSON.parse(localStorage.getItem("visionforge_subscribed_emails") || "[]"); } catch (e) { submitted = []; }
+      if (!submitted.includes(email)) submitted.push(email);
+      try { localStorage.setItem("visionforge_subscribed_emails", JSON.stringify(submitted.slice(-100))); } catch (e) {}
+      form.reset();
+      setSupportStatus(statusId, "Subscribed successfully.", "success");
+    } else {
+      form.reset();
+      setSupportStatus(statusId, "Thanks — your feedback was sent.", "success");
+    }
+  } catch (err) {
+    setSupportStatus(statusId, "Could not send right now. Please try again.", "error");
+  } finally {
+    setFormBusy(form, false);
+  }
+}
+
+function openMilaap() {
+  if (!isConfigured(MILAAP_URL, "PASTE_YOUR_MILAAP_FUNDRAISER_URL_HERE")) {
+    window.alert("Add your Milaap fundraiser URL in the VisionForge config first.");
+    return;
+  }
+  try {
+    const url = new URL(MILAAP_URL, window.location.href);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Invalid URL");
+    window.open(url.href, "_blank", "noopener,noreferrer");
+  } catch (err) {
+    window.alert("The Milaap fundraiser URL is not valid. Please check the config.");
+  }
+}
+
+function wireSupportFeatures() {
+  const donate = document.querySelector('[data-action="donate"]');
+  if (donate) donate.addEventListener("click", openMilaap);
+  const subscribe = $("subscribeForm");
+  if (subscribe) subscribe.addEventListener("submit", e => { e.preventDefault(); submitSupportForm(subscribe, "subscribeStatus", "newsletter_subscription"); });
+  const feedback = $("feedbackForm");
+  if (feedback) feedback.addEventListener("submit", e => { e.preventDefault(); submitSupportForm(feedback, "feedbackStatus", "feedback"); });
+}
+
 function wireUI() {
   const btn = $("menuBtn"), menu = $("mobileMenu");
   function setMenu(open) {
@@ -1206,7 +1395,7 @@ function wireUI() {
   }, {passive: true});
 
   /* active nav link follows the section in view */
-  const map = {"overview": "overview", "command-center": "command-center", "live-map": "live-map", "monitoring": "monitoring", "alerts-detail": "alerts", "response": "response", "about": "about"};
+  const map = {"overview": "overview", "command-center": "command-center", "live-map": "live-map", "monitoring": "monitoring", "alerts-detail": "alerts", "response": "response", "support": "support", "about": "about"};
   if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver(entries => {
       entries.forEach(en => {
@@ -1265,6 +1454,7 @@ alertHistory.unshift({time: hhmm(), level: ALERTS[state.status].level, title: AL
 renderAlertHistory();
 pushLog("Sensor network initialized", "normal");
 wireUI();
+wireSupportFeatures();
 pushHist();
 renderAll();
 setInterval(loop, 1000);
